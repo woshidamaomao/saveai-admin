@@ -1,0 +1,34 @@
+# =============================================================================
+# 可选叠加文件：接入已有 Traefik（external: traefik-public）
+# 域名：admin2030.saveai.net
+#
+#   docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d --build
+# =============================================================================
+
+services:
+  admin:
+    networks:
+      - traefik-public
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+
+      - traefik.http.services.saveai-admin.loadbalancer.server.port=80
+
+      - traefik.http.routers.saveai-admin-http.rule=Host("admin2030.saveai.net")
+      - traefik.http.routers.saveai-admin-http.entrypoints=http
+      - traefik.http.routers.saveai-admin-http.service=saveai-admin
+      - traefik.http.routers.saveai-admin-http.middlewares=https-redirect
+      - traefik.http.routers.saveai-admin-http.priority=100
+
+      - traefik.http.routers.saveai-admin-https.rule=Host("admin2030.saveai.net")
+      - traefik.http.routers.saveai-admin-https.entrypoints=https
+      - traefik.http.routers.saveai-admin-https.service=saveai-admin
+      - traefik.http.routers.saveai-admin-https.tls=true
+      - traefik.http.routers.saveai-admin-https.tls.certresolver=le
+      - traefik.http.routers.saveai-admin-https.priority=100
+
+networks:
+  traefik-public:
+    external: true

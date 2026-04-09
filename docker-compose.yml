@@ -1,0 +1,31 @@
+# =============================================================================
+# admin 专用 Compose（仅本目录有效，不依赖上级 saveai-service 仓库）
+# 默认：映射 HTTP 端口，任意环境可直接 up
+#
+#   cd admin
+#   docker compose up -d --build
+#
+# 与 Traefik 同机、域名 admin2030.saveai.net 时，叠加：
+#
+#   docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d --build
+#
+# 变量见 .env.example（复制为 .env）
+# =============================================================================
+
+services:
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://api-service.saveai.net/api}
+    image: saveai-admin:${IMAGE_TAG:-latest}
+    container_name: saveai-admin
+    restart: unless-stopped
+    ports:
+      - "${ADMIN_HTTP_PORT:-8080}:80"
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "2"
