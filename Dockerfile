@@ -21,6 +21,6 @@ RUN npm install -g serve@14
 COPY --from=builder /app/dist ./dist
 
 ENV NODE_ENV=production
-ENV PORT=3000
-EXPOSE 3000
+ENV PORT=3200
+EXPOSE 3200
 CMD ["sh", "-c", "exec serve -s dist -l tcp://0.0.0.0:${PORT}"]
