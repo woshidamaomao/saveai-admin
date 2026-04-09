@@ -1,16 +1,7 @@
-# =============================================================================
-# admin 专用 Compose（仅本目录有效，不依赖上级 saveai-service 仓库）
-# 默认：映射 HTTP 端口，任意环境可直接 up
+# saveai-admin：与 saveai-service 根目录 docker-compose.yml 相同模式
+# Traefik 自动发现，不映射宿主机端口；依赖外部网络 traefik-public
 #
-#   cd admin
-#   docker compose up -d --build
-#
-# 与 Traefik 同机、域名 admin2030.saveai.net 时，叠加：
-#
-#   docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d --build
-#
-# 变量见 .env.example（复制为 .env）
-# =============================================================================
+#   cd saveai-admin && docker compose up -d --build
 
 services:
   admin:
@@ -20,12 +11,32 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://api-service.saveai.net/api}
     image: saveai-admin:${IMAGE_TAG:-latest}
-    container_name: saveai-admin
-    restart: unless-stopped
-    ports:
-      - "${ADMIN_HTTP_PORT:-8080}:80"
-    logging:
-      driver: json-file
-      options:
-        max-size: "20m"
-        max-file: "2"
+    restart: always
+    environment:
+      PORT: ${ADMIN_CONTAINER_PORT:-3000}
+    networks:
+      - traefik-public
+      - default
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+
+      - traefik.http.services.saveai-admin.loadbalancer.server.port=${ADMIN_CONTAINER_PORT:-3000}
+
+      - traefik.http.routers.saveai-admin-http.rule=Host("admin2030.saveai.net")
+      - traefik.http.routers.saveai-admin-http.entrypoints=http
+      - traefik.http.routers.saveai-admin-http.service=saveai-admin
+      - traefik.http.routers.saveai-admin-http.middlewares=https-redirect
+      - traefik.http.routers.saveai-admin-http.priority=100
+
+      - traefik.http.routers.saveai-admin-https.rule=Host("admin2030.saveai.net")
+      - traefik.http.routers.saveai-admin-https.entrypoints=https
+      - traefik.http.routers.saveai-admin-https.service=saveai-admin
+      - traefik.http.routers.saveai-admin-https.tls=true
+      - traefik.http.routers.saveai-admin-https.tls.certresolver=le
+      - traefik.http.routers.saveai-admin-https.priority=100
+
+networks:
+  traefik-public:
+    external: true

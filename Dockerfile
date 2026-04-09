@@ -1,6 +1,6 @@
 # =============================================================================
-# 专用于 admin 管理后台（本目录即项目根，与仓库根目录的 API Dockerfile 无关）
-# 构建：在 admin 目录执行 docker compose build / docker build -f Dockerfile .
+# saveai-admin 管理后台（本目录为项目根）
+# 运行：Node + serve 托管静态资源，由主机 Traefik 发现容器（无 nginx）
 # =============================================================================
 FROM node:22-alpine AS builder
 WORKDIR /app
@@ -15,9 +15,12 @@ ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 RUN npm run build
 
-FROM nginx:1.27-alpine AS runner
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/dist /usr/share/nginx/html
+FROM node:22-alpine AS runner
+WORKDIR /app
+RUN npm install -g serve@14
+COPY --from=builder /app/dist ./dist
 
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
+CMD ["sh", "-c", "exec serve -s dist -l tcp://0.0.0.0:${PORT}"]
