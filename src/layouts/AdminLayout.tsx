@@ -1,5 +1,6 @@
 import {
   DashboardOutlined,
+  FileTextOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -27,6 +28,11 @@ const AdminLayout = () => {
   useEffect(() => {
     if (location.pathname.startsWith('/users')) {
       setOpenKeys(['user-mgmt'])
+      return
+    }
+
+    if (location.pathname.startsWith('/subscriptions')) {
+      setOpenKeys(['subscription-mgmt'])
     }
   }, [location.pathname])
 
@@ -37,6 +43,9 @@ const AdminLayout = () => {
     }
     if (path.startsWith('/users')) {
       return ['/users/list']
+    }
+    if (path.startsWith('/subscriptions')) {
+      return ['/subscriptions']
     }
     return ['/dashboard']
   }, [location.pathname])
@@ -73,6 +82,18 @@ const AdminLayout = () => {
               label: '工作台',
             },
             {
+              key: 'subscription-mgmt',
+              icon: <FileTextOutlined />,
+              label: '订阅管理',
+              children: [
+                {
+                  key: '/subscriptions',
+                  icon: <UnorderedListOutlined />,
+                  label: '订阅列表',
+                },
+              ],
+            },
+            {
               key: 'user-mgmt',
               icon: <TeamOutlined />,
               label: '用户管理',
@@ -91,7 +112,7 @@ const AdminLayout = () => {
             },
           ]}
           onClick={({ key }) => {
-            if (key === 'user-mgmt') {
+            if (key === 'user-mgmt' || key === 'subscription-mgmt') {
               return
             }
             navigate(String(key))

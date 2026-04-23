@@ -29,3 +29,35 @@ export type InfinityUsersResponse = {
   /** 后端用户列表接口会返回 */
   total?: number
 }
+
+export type ApiSubscription = {
+  id: number
+  subId: string
+  userUid: string
+  userEmail?: string | null
+  userCreatedAt?: string | null
+  priceId: string
+  productId: string
+  stripeSubscriptionId: string
+  stripeSubscriptionItemId: string | null
+  stripeCustomerId: string
+  status: string
+  quantity: number
+  currentPeriodStart: string
+  currentPeriodEnd: string
+  trialStart: string | null
+  trialEnd: string | null
+  isTrial: boolean
+  couponId: string | null
+  cancelAtPeriodEnd: boolean
+  canceledAt: string | null
+  stripeLastEventCreated: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type InfinitySubscriptionsResponse = {
+  data: ApiSubscription[]
+  hasNextPage: boolean
+  total?: number
+}

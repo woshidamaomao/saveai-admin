@@ -5,6 +5,8 @@ import DashboardPage from './pages/DashboardPage'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import SettingsPage from './pages/SettingsPage'
+import SubscriptionDetailPage from './pages/subscriptions/SubscriptionDetailPage'
+import SubscriptionListPage from './pages/subscriptions/SubscriptionListPage'
 import UserListPage from './pages/users/UserListPage'
 
 const App = () => {
@@ -16,6 +18,8 @@ const App = () => {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="subscriptions" element={<SubscriptionListPage />} />
+          <Route path="subscriptions/:subId" element={<SubscriptionDetailPage />} />
           <Route path="users/list" element={<UserListPage />} />
         </Route>
       </Route>
