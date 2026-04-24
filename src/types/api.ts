@@ -61,3 +61,29 @@ export type InfinitySubscriptionsResponse = {
   hasNextPage: boolean
   total?: number
 }
+
+export type DashboardLineSeries = {
+  name: string
+  data: number[]
+}
+
+export type DashboardRegistrationStatsResponse = {
+  timezone: string
+  startDate: string
+  endDate: string
+  dates: string[]
+  series: DashboardLineSeries[]
+}
+
+export type DashboardPdfUsageSeries = DashboardLineSeries & {
+  minimumCount: number
+}
+
+export type DashboardPdfUsageStatsResponse = {
+  timezone: string
+  comparison: string
+  startDate: string
+  endDate: string
+  dates: string[]
+  series: DashboardPdfUsageSeries[]
+}

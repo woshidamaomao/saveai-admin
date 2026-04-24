@@ -6,18 +6,20 @@ import {
   MenuUnfoldOutlined,
   SettingOutlined,
   TeamOutlined,
+  ToolOutlined,
   UnorderedListOutlined,
 } from '@ant-design/icons'
 import { Button, Layout, Menu, theme } from 'antd'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 const { Header, Sider, Content } = Layout
+const defaultOpenKeys = ['subscription-mgmt', 'user-mgmt']
 
 const AdminLayout = () => {
   const [collapsed, setCollapsed] = useState(false)
-  const [openKeys, setOpenKeys] = useState<string[]>([])
+  const [openKeys, setOpenKeys] = useState<string[]>(defaultOpenKeys)
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
@@ -25,19 +27,11 @@ const AdminLayout = () => {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken()
 
-  useEffect(() => {
-    if (location.pathname.startsWith('/users')) {
-      setOpenKeys(['user-mgmt'])
-      return
-    }
-
-    if (location.pathname.startsWith('/subscriptions')) {
-      setOpenKeys(['subscription-mgmt'])
-    }
-  }, [location.pathname])
-
   const selectedKeys = useMemo(() => {
     const path = location.pathname
+    if (path.startsWith('/toolbox')) {
+      return ['/toolbox']
+    }
     if (path.startsWith('/settings')) {
       return ['/settings']
     }
@@ -80,6 +74,11 @@ const AdminLayout = () => {
               key: '/dashboard',
               icon: <DashboardOutlined />,
               label: '工作台',
+            },
+            {
+              key: '/toolbox',
+              icon: <ToolOutlined />,
+              label: '工具箱',
             },
             {
               key: 'subscription-mgmt',

@@ -24,6 +24,7 @@ type FormattedTimeZoneDateTime = {
 type TimeDisplayProps = {
   value?: TimeDisplayValue
   emptyText?: ReactNode
+  allowWrap?: boolean
 }
 
 type TooltipTimeZoneItem = {
@@ -295,6 +296,7 @@ const renderTooltipContent = (date: Date) => (
 export const TimeDisplay = ({
   value,
   emptyText = '—',
+  allowWrap = false,
 }: TimeDisplayProps) => {
   const parsed = normalizeTimeValue(value)
 
@@ -310,14 +312,16 @@ export const TimeDisplay = ({
           alignItems: 'center',
           gap: 6,
           cursor: 'help',
-          whiteSpace: 'nowrap',
+          flexWrap: allowWrap ? 'wrap' : 'nowrap',
+          whiteSpace: allowWrap ? 'normal' : 'nowrap',
           fontVariantNumeric: 'tabular-nums',
         }}
       >
         <Text
           style={{
             fontVariantNumeric: 'tabular-nums',
-            whiteSpace: 'nowrap',
+            whiteSpace: allowWrap ? 'normal' : 'nowrap',
+            overflowWrap: allowWrap ? 'anywhere' : undefined,
           }}
         >
           {formatUtcDisplay(parsed)}

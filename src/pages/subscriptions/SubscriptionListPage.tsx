@@ -44,6 +44,16 @@ const statusColorMap: Record<string, string> = {
   incomplete_expired: 'default',
 }
 
+const wrapCellStyle = {
+  whiteSpace: 'normal' as const,
+  overflowWrap: 'anywhere' as const,
+  wordBreak: 'break-word' as const,
+}
+
+const renderWrapText = (value?: string | null) => (
+  <span style={wrapCellStyle}>{value || '—'}</span>
+)
+
 const renderBooleanTag = (value?: boolean) => {
   if (value == null) {
     return '—'
@@ -139,17 +149,21 @@ const SubscriptionListPage = () => {
       title: '订阅号',
       dataIndex: 'subId',
       key: 'subId',
-      width: 180,
       render: (value: string, row) => (
         <Button
           type="link"
-          style={{ padding: 0 }}
+          style={{
+            padding: 0,
+            height: 'auto',
+            textAlign: 'left',
+            whiteSpace: 'normal',
+          }}
           onClick={(event) => {
             event.stopPropagation()
             navigate(`/subscriptions/${row.subId}`)
           }}
         >
-          {value}
+          <span style={wrapCellStyle}>{value}</span>
         </Button>
       ),
     },
@@ -157,16 +171,13 @@ const SubscriptionListPage = () => {
       title: '用户 UID',
       dataIndex: 'userUid',
       key: 'userUid',
-      ellipsis: true,
-      width: 180,
+      render: (value?: string | null) => renderWrapText(value),
     },
     {
       title: '邮箱',
       dataIndex: 'userEmail',
       key: 'userEmail',
-      ellipsis: true,
-      width: 220,
-      render: (value?: string | null) => value || '—',
+      render: (value?: string | null) => renderWrapText(value),
     },
     {
       title: '状态',
@@ -193,15 +204,13 @@ const SubscriptionListPage = () => {
       title: '周期结束',
       dataIndex: 'currentPeriodEnd',
       key: 'currentPeriodEnd',
-      width: 220,
-      render: (value?: string | null) => <TimeDisplay value={value} />,
+      render: (value?: string | null) => <TimeDisplay value={value} allowWrap />,
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 220,
-      render: (value?: string | null) => <TimeDisplay value={value} />,
+      render: (value?: string | null) => <TimeDisplay value={value} allowWrap />,
     },
     {
       title: '操作',
@@ -271,7 +280,7 @@ const SubscriptionListPage = () => {
         loading={loading}
         columns={columns}
         dataSource={data}
-        scroll={{ x: 1720 }}
+        tableLayout="fixed"
         pagination={{
           current: page,
           pageSize: PAGE_SIZE,

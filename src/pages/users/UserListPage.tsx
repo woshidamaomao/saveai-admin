@@ -3,6 +3,7 @@ import { Button, Form, Input, Popconfirm, Space, Table, Typography, message } fr
 import type { ColumnsType } from 'antd/es/table'
 import { useCallback, useEffect, useState } from 'react'
 import { deleteUser, getUsers } from '../../api/users'
+import { TimeDisplay } from '../../components/TimeDisplay'
 import type { ApiUser } from '../../types/api'
 import { getErrorMessage } from '../../utils/error-message'
 
@@ -11,6 +12,16 @@ const { Title } = Typography
 const PAGE_SIZE = 10
 
 type ListFilters = { email: string; uid: string }
+
+const wrapCellStyle = {
+  whiteSpace: 'normal' as const,
+  overflowWrap: 'anywhere' as const,
+  wordBreak: 'break-word' as const,
+}
+
+const renderWrapText = (value?: string | null) => (
+  <span style={wrapCellStyle}>{value || '—'}</span>
+)
 
 const UserListPage = () => {
   const [form] = Form.useForm<{ email: string; uid: string }>()
@@ -81,8 +92,18 @@ const UserListPage = () => {
   const totalPages = total === 0 ? 0 : Math.ceil(total / PAGE_SIZE)
 
   const columns: ColumnsType<ApiUser> = [
-    { title: 'UID', dataIndex: 'uid', key: 'uid', ellipsis: true },
-    { title: '邮箱', dataIndex: 'email', key: 'email', render: (v) => v ?? '—' },
+    {
+      title: 'UID',
+      dataIndex: 'uid',
+      key: 'uid',
+      render: (value?: string | null) => renderWrapText(value),
+    },
+    {
+      title: '邮箱',
+      dataIndex: 'email',
+      key: 'email',
+      render: (value?: string | null) => renderWrapText(value),
+    },
     {
       title: '姓名',
       key: 'name',
@@ -98,9 +119,7 @@ const UserListPage = () => {
       title: '注册时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 200,
-      render: (v: string | undefined) =>
-        v ? new Date(v).toLocaleString('zh-CN') : '—',
+      render: (value?: string) => <TimeDisplay value={value} allowWrap />,
     },
     {
       title: '操作',
@@ -160,6 +179,7 @@ const UserListPage = () => {
         loading={loading}
         columns={columns}
         dataSource={data}
+        tableLayout="fixed"
         pagination={{
           current: page,
           pageSize: PAGE_SIZE,
