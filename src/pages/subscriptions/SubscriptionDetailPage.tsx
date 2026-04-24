@@ -22,6 +22,7 @@ import {
   getSubscription,
   updateSubscriptionTrialEnd,
 } from '../../api/subscriptions'
+import { TimeDisplay } from '../../components/TimeDisplay'
 import type { ApiSubscription } from '../../types/api'
 import { getErrorMessage } from '../../utils/error-message'
 
@@ -45,21 +46,6 @@ const statusColorMap: Record<string, string> = {
   unpaid: 'error',
   incomplete: 'gold',
   incomplete_expired: 'default',
-}
-
-const formatDateTime = (
-  value?: string | number | Date | Dayjs | null,
-) => {
-  if (value == null || value === '') {
-    return '—'
-  }
-
-  const formatted = dayjs(value)
-  if (!formatted.isValid()) {
-    return '—'
-  }
-
-  return formatted.format('YYYY-MM-DD HH:mm:ss')
 }
 
 const addDaysToDate = (value: string, days: number) => {
@@ -204,8 +190,12 @@ const SubscriptionDetailPage = () => {
       content: (
         <Space direction="vertical" size={4}>
           <Text>这是高风险操作，会改变用户订阅的下一次续费时间。</Text>
-          <Text>当前周期结束时间：{formatDateTime(subscription.currentPeriodEnd)}</Text>
-          <Text>新的 trial_end：{formatDateTime(nextTrialEnd)}</Text>
+          <Text>
+            当前周期结束时间：<TimeDisplay value={subscription.currentPeriodEnd} />
+          </Text>
+          <Text>
+            新的 trial_end：<TimeDisplay value={nextTrialEnd.valueOf()} />
+          </Text>
           <Text type="secondary">
             更新方式：{values.mode === 'add_days' ? `增加 ${values.days} 天` : '指定时间'}
           </Text>
@@ -331,7 +321,7 @@ const SubscriptionDetailPage = () => {
       >
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
           <Text type="secondary">
-            当前周期结束时间：{formatDateTime(subscription.currentPeriodEnd)}
+            当前周期结束时间：<TimeDisplay value={subscription.currentPeriodEnd} />
           </Text>
           <Form
             form={trialForm}
@@ -373,9 +363,11 @@ const SubscriptionDetailPage = () => {
           </Form>
           <Card size="small">
             <Space direction="vertical" size={4}>
-              <Text>原订阅截止时间：{formatDateTime(subscription.currentPeriodEnd)}</Text>
+              <Text>
+                原订阅截止时间：<TimeDisplay value={subscription.currentPeriodEnd} />
+              </Text>
               <Text strong>
-                新订阅截止时间：{previewTrialEnd ? formatDateTime(previewTrialEnd) : '待计算'}
+                新订阅截止时间：{previewTrialEnd ? <TimeDisplay value={previewTrialEnd.valueOf()} /> : '待计算'}
               </Text>
             </Space>
           </Card>
@@ -394,7 +386,7 @@ const SubscriptionDetailPage = () => {
               {renderTextValue(subscription.userEmail)}
             </Descriptions.Item>
             <Descriptions.Item label={renderFieldLabel('用户注册时间', 'userCreatedAt')}>
-              {formatDateTime(subscription.userCreatedAt)}
+              <TimeDisplay value={subscription.userCreatedAt} />
             </Descriptions.Item>
             <Descriptions.Item label={renderFieldLabel('是否试用', 'isTrial')}>
               {renderBooleanTag(subscription.isTrial)}
@@ -403,28 +395,28 @@ const SubscriptionDetailPage = () => {
               {renderBooleanTag(subscription.cancelAtPeriodEnd)}
             </Descriptions.Item>
             <Descriptions.Item label={renderFieldLabel('周期开始', 'currentPeriodStart')}>
-              {formatDateTime(subscription.currentPeriodStart)}
+              <TimeDisplay value={subscription.currentPeriodStart} />
             </Descriptions.Item>
             <Descriptions.Item label={renderFieldLabel('周期结束', 'currentPeriodEnd')}>
-              {formatDateTime(subscription.currentPeriodEnd)}
+              <TimeDisplay value={subscription.currentPeriodEnd} />
             </Descriptions.Item>
             <Descriptions.Item label={renderFieldLabel('试用开始', 'trialStart')}>
-              {formatDateTime(subscription.trialStart)}
+              <TimeDisplay value={subscription.trialStart} />
             </Descriptions.Item>
             <Descriptions.Item label={renderFieldLabel('试用结束', 'trialEnd')}>
-              {formatDateTime(subscription.trialEnd)}
+              <TimeDisplay value={subscription.trialEnd} />
             </Descriptions.Item>
             <Descriptions.Item label={renderFieldLabel('取消时间', 'canceledAt')}>
-              {formatDateTime(subscription.canceledAt)}
+              <TimeDisplay value={subscription.canceledAt} />
             </Descriptions.Item>
             <Descriptions.Item label={renderFieldLabel('最近 Stripe Event.created', 'stripeLastEventCreated')}>
-              {renderTextValue(subscription.stripeLastEventCreated)}
+              <TimeDisplay value={subscription.stripeLastEventCreated} />
             </Descriptions.Item>
             <Descriptions.Item label={renderFieldLabel('创建时间', 'createdAt')}>
-              {formatDateTime(subscription.createdAt)}
+              <TimeDisplay value={subscription.createdAt} />
             </Descriptions.Item>
             <Descriptions.Item label={renderFieldLabel('更新时间', 'updatedAt')}>
-              {formatDateTime(subscription.updatedAt)}
+              <TimeDisplay value={subscription.updatedAt} />
             </Descriptions.Item>
           </Descriptions>
         </Card>

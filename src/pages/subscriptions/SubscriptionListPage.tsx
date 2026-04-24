@@ -1,10 +1,10 @@
 import { EyeOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Form, Input, Select, Space, Table, Tag, Typography, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getSubscriptions } from '../../api/subscriptions'
+import { TimeDisplay } from '../../components/TimeDisplay'
 import type { ApiSubscription } from '../../types/api'
 import { getErrorMessage } from '../../utils/error-message'
 
@@ -42,19 +42,6 @@ const statusColorMap: Record<string, string> = {
   unpaid: 'error',
   incomplete: 'gold',
   incomplete_expired: 'default',
-}
-
-const formatDateTime = (value?: string | null) => {
-  if (!value) {
-    return '—'
-  }
-
-  const formatted = dayjs(value)
-  if (!formatted.isValid()) {
-    return '—'
-  }
-
-  return formatted.format('YYYY-MM-DD HH:mm:ss')
 }
 
 const renderBooleanTag = (value?: boolean) => {
@@ -206,15 +193,15 @@ const SubscriptionListPage = () => {
       title: '周期结束',
       dataIndex: 'currentPeriodEnd',
       key: 'currentPeriodEnd',
-      width: 180,
-      render: formatDateTime,
+      width: 220,
+      render: (value?: string | null) => <TimeDisplay value={value} />,
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 180,
-      render: formatDateTime,
+      width: 220,
+      render: (value?: string | null) => <TimeDisplay value={value} />,
     },
     {
       title: '操作',
