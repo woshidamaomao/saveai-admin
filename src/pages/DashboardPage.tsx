@@ -1,6 +1,7 @@
 import { Alert, Card, Col, DatePicker, Row, Select, Space, Spin, Statistic, Typography } from 'antd'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import { useEffect, useMemo, useState } from 'react'
 import { getDashboardPdfUsageStats, getDashboardUserRegistrations } from '../api/analysis'
 import SimpleLineChart from '../components/charts/SimpleLineChart'
@@ -13,6 +14,8 @@ import './DashboardPage.css'
 
 const { Title, Paragraph, Text } = Typography
 
+dayjs.extend(utc)
+
 const DEFAULT_RANGE_DAYS = 30
 const DEFAULT_PDF_MINIMUM_COUNTS = [1, 3, 5, 10]
 const PDF_MINIMUM_COUNT_OPTIONS = [1, 3, 5, 10, 20].map((value) => ({
@@ -23,28 +26,28 @@ const PDF_MINIMUM_COUNT_OPTIONS = [1, 3, 5, 10, 20].map((value) => ({
 type DateRange = [Dayjs, Dayjs]
 
 const createDefaultRange = (): DateRange => [
-  dayjs().startOf('day').subtract(DEFAULT_RANGE_DAYS - 1, 'day'),
-  dayjs().startOf('day'),
+  dayjs.utc().startOf('day').subtract(DEFAULT_RANGE_DAYS - 1, 'day'),
+  dayjs.utc().startOf('day'),
 ]
 
 const createRangePresets = (): Array<{ label: string; value: [Dayjs, Dayjs] }> => [
   {
     label: '最近 7 天',
-    value: [dayjs().startOf('day').subtract(6, 'day'), dayjs().startOf('day')],
+    value: [dayjs.utc().startOf('day').subtract(6, 'day'), dayjs.utc().startOf('day')],
   },
   {
     label: '最近 30 天',
-    value: [dayjs().startOf('day').subtract(29, 'day'), dayjs().startOf('day')],
+    value: [dayjs.utc().startOf('day').subtract(29, 'day'), dayjs.utc().startOf('day')],
   },
   {
     label: '最近 90 天',
-    value: [dayjs().startOf('day').subtract(89, 'day'), dayjs().startOf('day')],
+    value: [dayjs.utc().startOf('day').subtract(89, 'day'), dayjs.utc().startOf('day')],
   },
 ]
 
 const toQueryRange = (range: DateRange) => ({
-  startDate: range[0].format('YYYY-MM-DD'),
-  endDate: range[1].format('YYYY-MM-DD'),
+  startDate: `${range[0].format('YYYY-MM-DD')} 00:00:00`,
+  endDate: `${range[1].format('YYYY-MM-DD')} 23:59:59`,
 })
 
 const normalizeMinimumCounts = (values: Array<string | number>): number[] =>
@@ -148,7 +151,7 @@ const DashboardPage = () => {
     ? registrationSeries.data[registrationSeries.data.length - 1] ?? 0
     : 0
 
-  const usageSeries = usageStats?.series ?? []
+  const usageSeries = useMemo(() => usageStats?.series ?? [], [usageStats])
   const usagePeak = useMemo(
     () => Math.max(...usageSeries.flatMap((item) => item.data), 0),
     [usageSeries],
