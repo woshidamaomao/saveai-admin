@@ -67,7 +67,7 @@ export const getSubscription = async (subId: string) => {
 
 export const updateSubscriptionTrialEnd = async (subId: string, trialEndAt: number) => {
   const { data } = await api.patch<ApiSubscription>(
-    `/payment/admin/subscriptions/${subId}/trial-end`,
+    `/subscriptions/${subId}/trial-end`,
     {
       trialEndAt,
     },

@@ -9,7 +9,7 @@ const getDashboardUserRegistrations = async (params: {
   endDate: string
 }) => {
   const { data } = await api.get<DashboardRegistrationStatsResponse>(
-    '/analysis/admin/dashboard/user-registrations',
+    '/analysis/user-registrations',
     {
       params,
     },
@@ -23,7 +23,7 @@ const getDashboardPdfUsageStats = async (params: {
   minimumCounts: number[]
 }) => {
   const { data } = await api.get<DashboardPdfUsageStatsResponse>(
-    '/analysis/admin/dashboard/pdf-usage-users',
+    '/analysis/pdf-usage-users',
     {
       params: {
         startDate: params.startDate,
