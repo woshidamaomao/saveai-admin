@@ -9,8 +9,27 @@ export type ApiUser = {
   provider?: string
   firstName: string | null
   lastName: string | null
+  avatar?: string | null
   role?: Role | null
   status?: number
+  subscriptionStatus?: string
+  planSlug?: string
+  planName?: string
+  subscriptionPeriodStart?: string | null
+  subscriptionPeriodEnd?: string | null
+  subscriptionTrialStart?: string | null
+  subscriptionTrialEnd?: string | null
+  subscriptionIsTrial?: boolean
+  subscriptionQuantity?: number | null
+  subscriptionCancelAtPeriodEnd?: boolean
+  subscriptionCanceledAt?: string | null
+  subscription?: ApiSubscription | null
+  pdfExportUsed?: number
+  pdfExportLimit?: number
+  notionExportUsed?: number
+  notionExportLimit?: number
+  wordExportUsed?: number
+  wordExportLimit?: number
   createdAt?: string
   updatedAt?: string
   deletedAt?: string

@@ -1,4 +1,4 @@
-import type { InfinityUsersResponse } from '../types/api'
+import type { ApiUser, InfinityUsersResponse } from '../types/api'
 import { api } from './client'
 
 const getUsers = async (params: {
@@ -32,4 +32,9 @@ const deleteUser = async (uid: string) => {
   await api.delete(`/users/${uid}`)
 }
 
-export { deleteUser, getUsers }
+const getUser = async (uid: string) => {
+  const { data } = await api.get<ApiUser | null>(`/users/${uid}`)
+  return data
+}
+
+export { deleteUser, getUser, getUsers }

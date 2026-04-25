@@ -8,6 +8,7 @@ import SettingsPage from './pages/SettingsPage'
 import SubscriptionDetailPage from './pages/subscriptions/SubscriptionDetailPage'
 import SubscriptionListPage from './pages/subscriptions/SubscriptionListPage'
 import ToolboxPage from './pages/ToolboxPage'
+import UserDetailPage from './pages/users/UserDetailPage'
 import UserListPage from './pages/users/UserListPage'
 
 const App = () => {
@@ -23,6 +24,7 @@ const App = () => {
           <Route path="subscriptions" element={<SubscriptionListPage />} />
           <Route path="subscriptions/:subId" element={<SubscriptionDetailPage />} />
           <Route path="users/list" element={<UserListPage />} />
+          <Route path="users/:uid" element={<UserDetailPage />} />
         </Route>
       </Route>
       <Route path="*" element={<NotFoundPage />} />

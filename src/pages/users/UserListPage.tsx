@@ -1,7 +1,8 @@
-import { DeleteOutlined, SearchOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Form, Input, Popconfirm, Space, Table, Typography, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { deleteUser, getUsers } from '../../api/users'
 import { TimeDisplay } from '../../components/TimeDisplay'
 import type { ApiUser } from '../../types/api'
@@ -25,6 +26,7 @@ const renderWrapText = (value?: string | null) => (
 
 const UserListPage = () => {
   const [form] = Form.useForm<{ email: string; uid: string }>()
+  const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<ApiUser[]>([])
@@ -96,7 +98,23 @@ const UserListPage = () => {
       title: 'UID',
       dataIndex: 'uid',
       key: 'uid',
-      render: (value?: string | null) => renderWrapText(value),
+      render: (value: string | null | undefined, row) =>
+        value ? (
+          <Button
+            type="link"
+            style={{
+              padding: 0,
+              height: 'auto',
+              textAlign: 'left',
+              whiteSpace: 'normal',
+            }}
+            onClick={() => navigate(`/users/${row.uid}`)}
+          >
+            <span style={wrapCellStyle}>{value}</span>
+          </Button>
+        ) : (
+          renderWrapText(value)
+        ),
     },
     {
       title: '邮箱',
@@ -124,26 +142,36 @@ const UserListPage = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 100,
+      width: 150,
       render: (_, row) => (
-        <Popconfirm
-          title="确定删除该用户？"
-          description="删除后无法从此列表恢复，请确认。"
-          okText="删除"
-          cancelText="取消"
-          okButtonProps={{ danger: true }}
-          onConfirm={() => handleDelete(row.uid)}
-        >
+        <Space>
           <Button
             type="link"
-            danger
             size="small"
-            icon={<DeleteOutlined />}
-            loading={deletingUid === row.uid}
+            icon={<EyeOutlined />}
+            onClick={() => navigate(`/users/${row.uid}`)}
           >
-            删除
+            详情
           </Button>
-        </Popconfirm>
+          <Popconfirm
+            title="确定删除该用户？"
+            description="删除后无法从此列表恢复，请确认。"
+            okText="删除"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => handleDelete(row.uid)}
+          >
+            <Button
+              type="link"
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              loading={deletingUid === row.uid}
+            >
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
       ),
     },
   ]
