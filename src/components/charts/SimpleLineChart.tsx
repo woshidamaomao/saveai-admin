@@ -1,6 +1,6 @@
 import { Empty } from 'antd'
 import dayjs from 'dayjs'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 type LineSeries = {
   name: string
@@ -25,6 +25,8 @@ const SimpleLineChart = ({
   height = DEFAULT_HEIGHT,
   emptyText = '暂无数据',
 }: SimpleLineChartProps) => {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+
   const chartData = useMemo(() => {
     if (!dates.length || !series.length) {
       return null
@@ -89,6 +91,52 @@ const SimpleLineChart = ({
     return <Empty description={emptyText} image={Empty.PRESENTED_IMAGE_SIMPLE} />
   }
 
+  const hoveredDate =
+    hoveredIndex === null ? null : dayjs(dates[hoveredIndex]).format('YYYY-MM-DD')
+  const hoveredX = hoveredIndex === null ? null : chartData.getX(hoveredIndex)
+  const tooltipRows =
+    hoveredIndex === null
+      ? []
+      : chartData.renderSeries.map((item) => ({
+          name: item.name,
+          color: item.color,
+          value: item.data[hoveredIndex] ?? 0,
+        }))
+  const tooltipWidth = 220
+  const tooltipLineHeight = 18
+  const tooltipHeight = 14 + (tooltipRows.length + 1) * tooltipLineHeight
+  const tooltipX =
+    hoveredX === null
+      ? chartData.padding.left
+      : Math.min(
+          Math.max(
+            hoveredX + 12,
+            chartData.padding.left + 8,
+          ),
+          CHART_WIDTH - chartData.padding.right - tooltipWidth - 8,
+        )
+  const tooltipY = chartData.padding.top + 8
+
+  const handleMouseLeave = () => {
+    setHoveredIndex(null)
+  }
+
+  const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
+    const containerRect = event.currentTarget.getBoundingClientRect()
+    if (containerRect.width <= 0 || dates.length === 0) {
+      return
+    }
+
+    const offsetX = event.clientX - containerRect.left
+    const svgX = (offsetX / containerRect.width) * CHART_WIDTH
+    const minX = chartData.padding.left
+    const maxX = CHART_WIDTH - chartData.padding.right
+    const safeX = Math.min(Math.max(svgX, minX), maxX)
+    const ratio = (safeX - minX) / Math.max(maxX - minX, 1)
+    const nextIndex = Math.round(ratio * (dates.length - 1))
+    setHoveredIndex(nextIndex)
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
@@ -116,7 +164,7 @@ const SimpleLineChart = ({
               }}
             />
             <span>{item.name}</span>
-            <strong>{item.data[item.data.length - 1] ?? 0}</strong>
+            <strong>{item.data[hoveredIndex ?? item.data.length - 1] ?? 0}</strong>
           </div>
         ))}
       </div>
@@ -125,6 +173,9 @@ const SimpleLineChart = ({
         viewBox={`0 0 ${CHART_WIDTH} ${height}`}
         role="img"
         aria-label="line chart"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{ cursor: 'crosshair' }}
       >
         {chartData.yTicks.map((tick) => (
           <g key={tick}>
@@ -175,6 +226,13 @@ const SimpleLineChart = ({
             {item.label}
           </text>
         ))}
+        <rect
+          x={chartData.padding.left}
+          y={chartData.padding.top}
+          width={CHART_WIDTH - chartData.padding.left - chartData.padding.right}
+          height={height - chartData.padding.top - chartData.padding.bottom}
+          fill="transparent"
+        />
         {chartData.renderSeries.map((item) => (
           <g key={item.name}>
             <path
@@ -198,8 +256,65 @@ const SimpleLineChart = ({
                   />
                 ))
               : null}
+            {hoveredIndex !== null ? (
+              <circle
+                cx={item.points[hoveredIndex]?.x ?? chartData.getX(hoveredIndex)}
+                cy={item.points[hoveredIndex]?.y ?? chartData.getY(0)}
+                r={5.5}
+                fill={item.color}
+                stroke="#fff"
+                strokeWidth={2}
+              />
+            ) : null}
           </g>
         ))}
+        {hoveredIndex !== null && hoveredX !== null ? (
+          <line
+            x1={hoveredX}
+            y1={chartData.padding.top}
+            x2={hoveredX}
+            y2={height - chartData.padding.bottom}
+            stroke="#595959"
+            strokeWidth={1}
+            strokeDasharray="4 4"
+            opacity={0.5}
+          />
+        ) : null}
+        {hoveredIndex !== null && hoveredDate ? (
+          <g>
+            <rect
+              x={tooltipX}
+              y={tooltipY}
+              width={tooltipWidth}
+              height={tooltipHeight}
+              rx={8}
+              fill="#fff"
+              stroke="#d9d9d9"
+              strokeWidth={1}
+            />
+            <text x={tooltipX + 12} y={tooltipY + 20} fill="#262626" fontSize={12} fontWeight={600}>
+              {hoveredDate}
+            </text>
+            {tooltipRows.map((row, index) => (
+              <g key={`${row.name}-${row.value}`}>
+                <circle
+                  cx={tooltipX + 16}
+                  cy={tooltipY + 20 + (index + 1) * tooltipLineHeight - 4}
+                  r={4}
+                  fill={row.color}
+                />
+                <text
+                  x={tooltipX + 28}
+                  y={tooltipY + 20 + (index + 1) * tooltipLineHeight}
+                  fill="#434343"
+                  fontSize={12}
+                >
+                  {row.name}: {row.value}
+                </text>
+              </g>
+            ))}
+          </g>
+        ) : null}
       </svg>
     </div>
   )
