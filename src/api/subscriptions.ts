@@ -1,4 +1,10 @@
-import type { ApiSubscription, InfinitySubscriptionsResponse } from '../types/api'
+import type {
+  ApiPrice,
+  ApiSubscription,
+  ApiSubscriptionRefundPreview,
+  ApiSubscriptionRefundResponse,
+  InfinitySubscriptionsResponse,
+} from '../types/api'
 import { api } from './client'
 
 type SubscriptionFilters = {
@@ -60,6 +66,20 @@ export const getSubscriptions = async (params: {
   return data
 }
 
+export const getSubscriptionTrialPriceOptions = async () => {
+  const { data } = await api.get<ApiPrice[]>('/subscriptions/trial-price-options')
+  return data
+}
+
+export const createTrialSubscription = async (payload: {
+  uid: string
+  priceId: string
+  trialDays: number
+}) => {
+  const { data } = await api.post<ApiSubscription>('/subscriptions/trial', payload)
+  return data
+}
+
 export const getSubscription = async (subId: string) => {
   const { data } = await api.get<ApiSubscription>(`/subscriptions/${subId}`)
   return data
@@ -71,6 +91,26 @@ export const updateSubscriptionTrialEnd = async (subId: string, trialEndAt: numb
     {
       trialEndAt,
     },
+  )
+  return data
+}
+
+export const getSubscriptionRefundPreview = async (subId: string) => {
+  const { data } = await api.get<ApiSubscriptionRefundPreview>(
+    `/subscriptions/${subId}/refund-preview`,
+  )
+  return data
+}
+
+export const refundSubscription = async (
+  subId: string,
+  payload?: {
+    invoiceRefunds?: { invoiceId: string; lineId: string; amount: number }[]
+  },
+) => {
+  const { data } = await api.post<ApiSubscriptionRefundResponse>(
+    `/subscriptions/${subId}/refund`,
+    payload ?? {},
   )
   return data
 }

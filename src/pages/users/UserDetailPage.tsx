@@ -1,9 +1,18 @@
-import { ArrowLeftOutlined, BarChartOutlined, FileTextOutlined } from '@ant-design/icons'
+import {
+  ArrowLeftOutlined,
+  BarChartOutlined,
+  FileTextOutlined,
+  GiftOutlined,
+} from '@ant-design/icons'
 import {
   Button,
   Card,
   Descriptions,
+  Form,
+  InputNumber,
+  Modal,
   Result,
+  Select,
   Space,
   Spin,
   Tag,
@@ -12,12 +21,21 @@ import {
 } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import {
+  createTrialSubscription,
+  getSubscriptionTrialPriceOptions,
+} from '../../api/subscriptions'
 import { getUser } from '../../api/users'
 import { TimeDisplay } from '../../components/TimeDisplay'
-import type { ApiSubscription, ApiUser, Role } from '../../types/api'
+import type { ApiPrice, ApiSubscription, ApiUser, Role } from '../../types/api'
 import { getErrorMessage } from '../../utils/error-message'
 
 const { Title, Text } = Typography
+
+type TrialSubscriptionFormValues = {
+  priceId?: string
+  trialDays?: number
+}
 
 const subscriptionStatusColorMap: Record<string, string> = {
   trialing: 'processing',
@@ -88,6 +106,41 @@ const renderSubscriptionStatusTag = (status?: string) => {
   return <Tag color={subscriptionStatusColorMap[status] ?? 'default'}>{status}</Tag>
 }
 
+const canCreateTrialSubscription = (user: ApiUser) => {
+  const status = user.subscriptionStatus || user.subscription?.status || ''
+  return status !== 'active' && status !== 'trialing'
+}
+
+const getBillingIntervalText = (value: number) => {
+  if (value === 1) {
+    return '月付'
+  }
+  if (value === 2) {
+    return '年付'
+  }
+
+  return `周期 ${value}`
+}
+
+const formatPriceAmount = (price: ApiPrice) => {
+  const currency = price.currency?.toUpperCase() || 'USD'
+  const amount = Number(price.showPrice || price.unitAmount / 100)
+
+  try {
+    return new Intl.NumberFormat('zh-CN', {
+      style: 'currency',
+      currency,
+    }).format(amount)
+  } catch {
+    return `${amount.toFixed(2)} ${currency}`
+  }
+}
+
+const getPriceOptionLabel = (price: ApiPrice) => {
+  const productName = price.product?.name || price.productId
+  return `${productName} / ${getBillingIntervalText(price.billingInterval)} / ${formatPriceAmount(price)} / ${price.priceId}`
+}
+
 const formatUsage = (used?: number, limit?: number) => {
   if (used == null && limit == null) {
     return '—'
@@ -124,12 +177,17 @@ const renderSubscriptionLink = (
 }
 
 const UserDetailPage = () => {
+  const [trialForm] = Form.useForm<TrialSubscriptionFormValues>()
   const navigate = useNavigate()
   const { uid } = useParams<{ uid: string }>()
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<ApiUser | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
+  const [trialModalOpen, setTrialModalOpen] = useState(false)
+  const [trialPriceOptions, setTrialPriceOptions] = useState<ApiPrice[]>([])
+  const [trialPriceLoading, setTrialPriceLoading] = useState(false)
+  const [trialSubmitting, setTrialSubmitting] = useState(false)
 
   const load = useCallback(async () => {
     if (!uid) {
@@ -162,6 +220,68 @@ const UserDetailPage = () => {
   useEffect(() => {
     void load()
   }, [load])
+
+  const loadTrialPriceOptions = async () => {
+    setTrialPriceLoading(true)
+    try {
+      const data = await getSubscriptionTrialPriceOptions()
+      setTrialPriceOptions(data)
+    } catch (error) {
+      message.error(getErrorMessage(error, '加载订阅套餐失败'))
+    } finally {
+      setTrialPriceLoading(false)
+    }
+  }
+
+  const openTrialModal = () => {
+    if (!user || !canCreateTrialSubscription(user)) {
+      return
+    }
+
+    trialForm.setFieldsValue({
+      priceId: undefined,
+      trialDays: undefined,
+    })
+    setTrialModalOpen(true)
+
+    if (trialPriceOptions.length === 0) {
+      void loadTrialPriceOptions()
+    }
+  }
+
+  const submitTrialSubscription = async () => {
+    if (!user) {
+      return
+    }
+
+    let values: TrialSubscriptionFormValues
+    try {
+      values = await trialForm.validateFields()
+    } catch {
+      return
+    }
+
+    if (!values.priceId || typeof values.trialDays !== 'number') {
+      return
+    }
+
+    setTrialSubmitting(true)
+    try {
+      await createTrialSubscription({
+        uid: user.uid,
+        priceId: values.priceId,
+        trialDays: values.trialDays,
+      })
+      setTrialModalOpen(false)
+      trialForm.resetFields()
+      message.success('试用订阅已创建')
+      await load()
+    } catch (error) {
+      message.error(getErrorMessage(error, '创建试用订阅失败'))
+    } finally {
+      setTrialSubmitting(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -218,10 +338,59 @@ const UserDetailPage = () => {
         >
           查看用量
         </Button>
+        {canCreateTrialSubscription(user) ? (
+          <Button icon={<GiftOutlined />} onClick={openTrialModal}>
+            创建试用订阅
+          </Button>
+        ) : null}
       </Space>
       <Title level={4} style={{ marginTop: 0 }}>
         用户详情
       </Title>
+      <Modal
+        title="创建试用订阅"
+        open={trialModalOpen}
+        okText="创建"
+        cancelText="取消"
+        confirmLoading={trialSubmitting}
+        okButtonProps={{
+          disabled: trialPriceLoading || trialPriceOptions.length === 0,
+        }}
+        onCancel={() => setTrialModalOpen(false)}
+        onOk={() => void submitTrialSubscription()}
+      >
+        <Form form={trialForm} layout="vertical">
+          <Form.Item
+            name="priceId"
+            label="订阅套餐"
+            rules={[{ required: true, message: '请选择订阅套餐' }]}
+          >
+            <Select
+              showSearch
+              loading={trialPriceLoading}
+              placeholder="请选择订阅套餐"
+              optionFilterProp="label"
+              options={trialPriceOptions.map((price) => ({
+                value: price.priceId,
+                label: getPriceOptionLabel(price),
+              }))}
+            />
+          </Form.Item>
+          <Form.Item
+            name="trialDays"
+            label="试用天数"
+            rules={[{ required: true, message: '请输入试用天数' }]}
+          >
+            <InputNumber
+              min={1}
+              max={730}
+              precision={0}
+              placeholder="请输入试用天数"
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         <Card title="用户信息">
           <Descriptions bordered column={2} size="middle">

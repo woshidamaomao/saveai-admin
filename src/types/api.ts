@@ -92,6 +92,101 @@ export type ApiSubscription = {
   updatedAt: string
 }
 
+export type ApiProduct = {
+  id: number
+  productId: string
+  slug: string
+  name: string
+  description: string | null
+  pdfExportDailyLimit: number
+  notionExportDailyLimit: number
+  wordExportDailyLimit: number
+  teamMembersLimit: number
+  state: number
+  displayOrder: number
+  createdAt: string
+  updatedAt: string
+  archivedAt: string | null
+}
+
+export type ApiPrice = {
+  id: number
+  productId: string
+  product?: ApiProduct
+  priceId: string
+  billingInterval: number
+  billingMode: number
+  unitAmount: number
+  showPrice: number
+  currency: string
+  trialDays: number
+  state: number
+  isDefault: boolean
+  displayOrder: number
+  createdAt: string
+  updatedAt: string
+  archivedAt: string | null
+}
+
+export type ApiSubscriptionRefundFundingInvoice = {
+  invoiceId: string
+  invoiceNumber: string | null
+  invoiceCreatedAt: string
+  lineId: string
+  fundingType: string
+  periodStart: string
+  periodEnd: string
+  refundPeriodStart: string
+  refundPeriodEnd: string
+  amountPaid: number
+  refundBaseAmount: number
+  calculatedRefundAmount: number
+  maxRefundAmount: number
+  refundDays: number
+  currency: string
+  creditedInvoiceId: string | null
+  creditedLineIds: string[]
+}
+
+export type ApiSubscriptionRefundPhase = {
+  phaseKey: string
+  phaseType: string
+  periodStart: string
+  periodEnd: string
+  refundDays: number
+  currency: string
+  calculatedRefundAmount: number
+  maxRefundAmount: number
+  fundingInvoiceCount: number
+  fundingInvoices: ApiSubscriptionRefundFundingInvoice[]
+}
+
+export type ApiSubscriptionRefundPreview = {
+  subId: string
+  stripeSubscriptionId: string
+  currency: string | null
+  phaseCount: number
+  fundingInvoiceCount: number
+  invoiceCount: number
+  totalCalculatedRefundAmount: number
+  phases: ApiSubscriptionRefundPhase[]
+}
+
+export type ApiSubscriptionRefundItem = {
+  refundId: string
+  paymentIntentId: string
+  amount: number
+  currency: string
+  status: string | null
+}
+
+export type ApiSubscriptionRefundResponse = ApiSubscriptionRefundPreview & {
+  refundAmount: number
+  refunded: boolean
+  refunds: ApiSubscriptionRefundItem[]
+  subscription: ApiSubscription
+}
+
 export type InfinitySubscriptionsResponse = {
   data: ApiSubscription[]
   hasNextPage: boolean
