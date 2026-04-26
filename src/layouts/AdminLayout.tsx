@@ -65,7 +65,7 @@ const AdminLayout = () => {
             overflow: 'hidden',
           }}
         >
-          {collapsed ? 'SA' : 'SaveAI 管理'}
+          Hello, admin!
         </div>
         <Menu
           theme="dark"
