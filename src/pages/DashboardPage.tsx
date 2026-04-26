@@ -45,9 +45,14 @@ const createRangePresets = (): Array<{ label: string; value: [Dayjs, Dayjs] }> =
   },
 ]
 
-const toQueryRange = (range: DateRange) => ({
+const toRegistrationQueryRange = (range: DateRange) => ({
   startDate: `${range[0].format('YYYY-MM-DD')} 00:00:00`,
   endDate: `${range[1].format('YYYY-MM-DD')} 23:59:59`,
+})
+
+const toPdfUsageQueryRange = (range: DateRange) => ({
+  startDate: range[0].format('YYYY-MM-DD'),
+  endDate: range[1].format('YYYY-MM-DD'),
 })
 
 const normalizeMinimumCounts = (values: Array<string | number>): number[] =>
@@ -78,7 +83,9 @@ const DashboardPage = () => {
       setRegistrationLoading(true)
       setRegistrationError(null)
       try {
-        const data = await getDashboardUserRegistrations(toQueryRange(registrationRange))
+        const data = await getDashboardUserRegistrations(
+          toRegistrationQueryRange(registrationRange),
+        )
         if (!active) {
           return
         }
@@ -111,7 +118,7 @@ const DashboardPage = () => {
       setUsageError(null)
       try {
         const data = await getDashboardPdfUsageStats({
-          ...toQueryRange(usageRange),
+          ...toPdfUsageQueryRange(usageRange),
           minimumCounts: pdfMinimumCounts,
         })
         if (!active) {
@@ -185,8 +192,12 @@ const DashboardPage = () => {
               }}
             />
             <Text type="secondary">
-              当前范围：{registrationStats?.startDate ?? toQueryRange(registrationRange).startDate} 至{' '}
-              {registrationStats?.endDate ?? toQueryRange(registrationRange).endDate}
+              当前范围：
+              {registrationStats?.startDate ??
+                toRegistrationQueryRange(registrationRange).startDate}{' '}
+              至{' '}
+              {registrationStats?.endDate ??
+                toRegistrationQueryRange(registrationRange).endDate}
             </Text>
           </Space>
 
