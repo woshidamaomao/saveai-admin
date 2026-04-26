@@ -1,4 +1,4 @@
-import { DeleteOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons'
+import { BarChartOutlined, DeleteOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Form, Input, Popconfirm, Space, Table, Typography, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useCallback, useEffect, useState } from 'react'
@@ -142,7 +142,7 @@ const UserListPage = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 150,
+      width: 220,
       render: (_, row) => (
         <Space>
           <Button
@@ -152,6 +152,16 @@ const UserListPage = () => {
             onClick={() => navigate(`/users/${row.uid}`)}
           >
             详情
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            icon={<BarChartOutlined />}
+            href={`/users/usages?userUid=${encodeURIComponent(row.uid)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            用量
           </Button>
           <Popconfirm
             title="确定删除该用户？"

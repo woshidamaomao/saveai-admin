@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   COMMON_TIME_ZONE_OPTIONS,
   DEFAULT_SOURCE_TIME_ZONE,
-  DEFAULT_TARGET_TIME_ZONES,
   formatTimeZoneDateTimeLines,
   getCurrentDayjsForTimeZone,
   getTimeZoneOption,
@@ -14,7 +13,7 @@ import './ToolboxPage.css'
 
 const { Title, Paragraph, Text } = Typography
 
-const defaultTargetTimeZones = DEFAULT_TARGET_TIME_ZONES.filter(
+const defaultTargetTimeZones = COMMON_TIME_ZONE_OPTIONS.map((option) => option.timeZone).filter(
   (timeZone) => timeZone !== DEFAULT_SOURCE_TIME_ZONE,
 )
 
@@ -88,14 +87,14 @@ const ToolboxPage = () => {
 
   return (
     <div className="toolbox-page">
-      <Title level={4} style={{ marginTop: 0 }}>
+      <Title level={5} style={{ marginTop: 0 }}>
         工具箱
       </Title>
-      <Paragraph type="secondary" className="toolbox-page__intro">
+      <Paragraph type="secondary" className="toolbox-page__intro" style={{ fontSize: 13 }}>
         这里放纯前端的小工具。当前先提供时间转换器，统一基于浏览器内置 `Intl` 时区能力做转换。
       </Paragraph>
 
-      <Card title="时间转换器" className="toolbox-page__tool-card">
+      <Card title="时间转换器" size="small" className="toolbox-page__tool-card">
         <div className="toolbox-page__hero">
           <p className="toolbox-page__hero-title">当前 UTC 时间</p>
           <TimeText date={now} timeZone="UTC" className="toolbox-page__hero-time" />
@@ -141,20 +140,20 @@ const ToolboxPage = () => {
                 先选择源时区和对应日期时间，再把它转换成其他国家/地区时间。默认源时区是北京时间。
               </p>
             </div>
-            <Button onClick={() => setSelectedDateTime(getCurrentDayjsForTimeZone(sourceTimeZone))}>
+            <Button size="small" onClick={() => setSelectedDateTime(getCurrentDayjsForTimeZone(sourceTimeZone))}>
               重置为当前源时区时间
             </Button>
           </div>
 
           <div className="toolbox-page__controls">
             <div className="toolbox-page__control-item">
-              <Text strong>源日期时间</Text>
+              <Text strong style={{ fontSize: 13 }}>源日期时间</Text>
               <DatePicker
                 showTime={{ format: 'HH:mm:ss' }}
                 allowClear={false}
                 format="YYYY-MM-DD HH:mm:ss"
                 value={selectedDateTime}
-                style={{ width: '100%', marginTop: 8 }}
+                style={{ width: '100%', marginTop: 4 }}
                 onChange={(value) => {
                   if (!value) {
                     return
@@ -165,33 +164,33 @@ const ToolboxPage = () => {
             </div>
 
             <div className="toolbox-page__control-item">
-              <Text strong>源时区</Text>
+              <Text strong style={{ fontSize: 13 }}>源时区</Text>
               <Select
                 showSearch
                 optionFilterProp="label"
                 value={sourceTimeZone}
-                style={{ width: '100%', marginTop: 8 }}
+                style={{ width: '100%', marginTop: 4 }}
                 options={toSelectOptions}
                 onChange={(value) => setSourceTimeZone(value)}
               />
             </div>
 
             <div className="toolbox-page__control-item">
-              <Text strong>输出时区</Text>
+              <Text strong style={{ fontSize: 13 }}>输出时区</Text>
               <Select
                 mode="multiple"
                 showSearch
                 optionFilterProp="label"
                 maxTagCount="responsive"
                 value={targetTimeZones}
-                style={{ width: '100%', marginTop: 8 }}
+                style={{ width: '100%', marginTop: 4 }}
                 options={toSelectOptions.filter((option) => option.value !== sourceTimeZone)}
                 onChange={(value) => setTargetTimeZones(value)}
               />
             </div>
           </div>
 
-          <Space direction="vertical" size={16} style={{ width: '100%', marginTop: 18 }}>
+          <Space direction="vertical" size={12} style={{ width: '100%', marginTop: 14 }}>
             <div className="toolbox-page__source-preview">
               <p className="toolbox-page__source-preview-label">
                 源时区时间

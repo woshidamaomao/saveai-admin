@@ -49,6 +49,23 @@ export type InfinityUsersResponse = {
   total?: number
 }
 
+export type ApiDailyUsage = {
+  id: number
+  userUid: string
+  userEmail?: string | null
+  pdfExportUsedToday: number
+  notionExportUsedToday: number
+  usageDate: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type InfinityDailyUsagesResponse = {
+  data: ApiDailyUsage[]
+  hasNextPage: boolean
+  total?: number
+}
+
 export type ApiSubscription = {
   id: number
   subId: string

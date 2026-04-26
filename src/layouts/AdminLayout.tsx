@@ -1,4 +1,5 @@
 import {
+  BarChartOutlined,
   DashboardOutlined,
   FileTextOutlined,
   LogoutOutlined,
@@ -36,6 +37,9 @@ const AdminLayout = () => {
       return ['/settings']
     }
     if (path.startsWith('/users')) {
+      if (path.startsWith('/users/usages')) {
+        return ['/users/usages']
+      }
       return ['/users/list']
     }
     if (path.startsWith('/subscriptions')) {
@@ -101,6 +105,11 @@ const AdminLayout = () => {
                   key: '/users/list',
                   icon: <UnorderedListOutlined />,
                   label: '用户列表',
+                },
+                {
+                  key: '/users/usages',
+                  icon: <BarChartOutlined />,
+                  label: '用量管理',
                 },
               ],
             },

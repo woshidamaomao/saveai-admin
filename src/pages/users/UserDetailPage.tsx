@@ -1,4 +1,4 @@
-import { ArrowLeftOutlined, FileTextOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, BarChartOutlined, FileTextOutlined } from '@ant-design/icons'
 import {
   Button,
   Card,
@@ -209,6 +209,14 @@ const UserDetailPage = () => {
       <Space style={{ marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/users/list')}>
           返回列表
+        </Button>
+        <Button
+          icon={<BarChartOutlined />}
+          href={`/users/usages?userUid=${encodeURIComponent(user.uid)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          查看用量
         </Button>
       </Space>
       <Title level={4} style={{ marginTop: 0 }}>

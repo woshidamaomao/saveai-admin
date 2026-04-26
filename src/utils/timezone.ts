@@ -24,19 +24,6 @@ export type FormattedTimeZoneDateTime = {
 
 export const DEFAULT_SOURCE_TIME_ZONE = 'Asia/Shanghai'
 
-export const DEFAULT_TARGET_TIME_ZONES = [
-  'UTC',
-  'America/New_York',
-  'Europe/London',
-  'Europe/Paris',
-  'Asia/Tokyo',
-  'Asia/Seoul',
-  'Asia/Singapore',
-  'Asia/Kolkata',
-  'Asia/Dubai',
-  'Asia/Riyadh',
-]
-
 export const COMMON_TIME_ZONE_OPTIONS: TimeZoneOption[] = [
   {
     label: 'UTC',
@@ -69,6 +56,18 @@ export const COMMON_TIME_ZONE_OPTIONS: TimeZoneOption[] = [
     description: '韩国标准时间',
   },
   {
+    label: '澳大利亚（悉尼）',
+    timeZone: 'Australia/Sydney',
+    region: '大洋洲',
+    description: '澳大利亚东部时间',
+  },
+  {
+    label: '新西兰（奥克兰）',
+    timeZone: 'Pacific/Auckland',
+    region: '大洋洲',
+    description: '新西兰标准时间',
+  },
+  {
     label: '美国（纽约）',
     timeZone: 'America/New_York',
     region: '美国东部',
@@ -79,6 +78,12 @@ export const COMMON_TIME_ZONE_OPTIONS: TimeZoneOption[] = [
     timeZone: 'America/Los_Angeles',
     region: '美国西部',
     description: '美国太平洋时间',
+  },
+  {
+    label: '加拿大（多伦多）',
+    timeZone: 'America/Toronto',
+    region: '北美',
+    description: '北美东部时间',
   },
   {
     label: '英国（伦敦）',
@@ -95,6 +100,18 @@ export const COMMON_TIME_ZONE_OPTIONS: TimeZoneOption[] = [
   {
     label: '德国（柏林）',
     timeZone: 'Europe/Berlin',
+    region: '欧洲',
+    description: '中欧时间',
+  },
+  {
+    label: '意大利（罗马）',
+    timeZone: 'Europe/Rome',
+    region: '欧洲',
+    description: '中欧时间',
+  },
+  {
+    label: '瑞士（苏黎世）',
+    timeZone: 'Europe/Zurich',
     region: '欧洲',
     description: '中欧时间',
   },
