@@ -8,6 +8,7 @@ import SettingsPage from './pages/SettingsPage'
 import SubscriptionDetailPage from './pages/subscriptions/SubscriptionDetailPage'
 import SubscriptionListPage from './pages/subscriptions/SubscriptionListPage'
 import ToolboxPage from './pages/ToolboxPage'
+import LoadCalculatorPage from './pages/toolbox/LoadCalculatorPage'
 import DailyUsageListPage from './pages/users/DailyUsageListPage'
 import UserDetailPage from './pages/users/UserDetailPage'
 import UserListPage from './pages/users/UserListPage'
@@ -21,6 +22,7 @@ const App = () => {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="toolbox" element={<ToolboxPage />} />
+          <Route path="toolbox/load-calculator" element={<LoadCalculatorPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="subscriptions" element={<SubscriptionListPage />} />
           <Route path="subscriptions/:subId" element={<SubscriptionDetailPage />} />

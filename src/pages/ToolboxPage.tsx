@@ -1,4 +1,6 @@
 import { Button, Card, DatePicker, Divider, Select, Space, Typography } from 'antd'
+import { CalculatorOutlined } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 import type { Dayjs } from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -46,6 +48,7 @@ const TimeText = ({
 }
 
 const ToolboxPage = () => {
+  const navigate = useNavigate()
   const [now, setNow] = useState(() => new Date())
   const [sourceTimeZone, setSourceTimeZone] = useState(DEFAULT_SOURCE_TIME_ZONE)
   const [selectedDateTime, setSelectedDateTime] = useState<Dayjs>(() =>
@@ -219,6 +222,21 @@ const ToolboxPage = () => {
             </div>
           </Space>
         </section>
+      </Card>
+
+      <Card size="small" style={{ marginTop: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <Text strong>更多工具</Text>
+          </div>
+          <Button
+            type="link"
+            icon={<CalculatorOutlined />}
+            onClick={() => navigate('/toolbox/load-calculator')}
+          >
+            负载调参生成器
+          </Button>
+        </div>
       </Card>
     </div>
   )
