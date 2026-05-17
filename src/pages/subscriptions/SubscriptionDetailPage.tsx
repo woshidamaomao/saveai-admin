@@ -6,6 +6,7 @@ import {
   DatePicker,
   Descriptions,
   Form,
+  Grid,
   InputNumber,
   Modal,
   Radio,
@@ -38,6 +39,7 @@ import { getErrorMessage } from '../../utils/error-message'
 
 const { Title } = Typography
 const { Text } = Typography
+const { useBreakpoint } = Grid
 
 type TrialEndMode = 'add_days' | 'specified_time'
 
@@ -194,6 +196,8 @@ const renderRefundPhaseType = (type: string) => {
 const SubscriptionDetailPage = () => {
   const [trialForm] = Form.useForm<TrialEndFormValues>()
   const navigate = useNavigate()
+  const screens = useBreakpoint()
+  const isMobile = !screens.md
   const { subId } = useParams<{ subId: string }>()
   const [loading, setLoading] = useState(true)
   const [subscription, setSubscription] = useState<ApiSubscription | null>(null)
@@ -298,6 +302,7 @@ const SubscriptionDetailPage = () => {
 
     Modal.confirm({
       title: '确认更新 trial_end？',
+      width: isMobile ? 'calc(100vw - 32px)' : undefined,
       content: (
         <Space direction="vertical" size={4}>
           <Text>这是高风险操作，会改变用户订阅的下一次续费时间。</Text>
@@ -689,7 +694,7 @@ const SubscriptionDetailPage = () => {
 
   return (
     <div>
-      <Space style={{ marginBottom: 16 }}>
+      <Space style={{ marginBottom: 16 }} wrap>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/subscriptions')}>
           返回列表
         </Button>
@@ -699,7 +704,7 @@ const SubscriptionDetailPage = () => {
       </Title>
       <Space direction="vertical" size={16} style={{ width: '100%', marginBottom: 16 }}>
         <Card title="订阅操作">
-          <Space>
+          <Space wrap>
             <Button
               type="primary"
               disabled={!canUpdateTrialEnd(subscription)}
@@ -724,6 +729,7 @@ const SubscriptionDetailPage = () => {
         okText="下一步"
         cancelText="取消"
         confirmLoading={updatingTrialEnd}
+        width={isMobile ? 'calc(100vw - 32px)' : undefined}
         onCancel={() => setTrialEndModalOpen(false)}
         onOk={() => void handleUpdateTrialEnd()}
       >
@@ -786,7 +792,7 @@ const SubscriptionDetailPage = () => {
         open={refundModalOpen}
         okText="确认退款并取消"
         cancelText="取消"
-        width={1280}
+        width={isMobile ? 'calc(100vw - 32px)' : 1280}
         confirmLoading={refundSubmitting}
         okButtonProps={{
           danger: true,
@@ -813,7 +819,7 @@ const SubscriptionDetailPage = () => {
             ) : null}
             {refundPreview ? (
               <>
-                <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                <Space style={{ width: '100%', justifyContent: 'space-between' }} wrap>
                   <Space direction="vertical" size={0}>
                     <Text>
                       可退款阶段：{refundPreview.phaseCount} 个；可退款账单：{refundPreview.fundingInvoiceCount} 张
@@ -840,6 +846,7 @@ const SubscriptionDetailPage = () => {
                   }}
                   pagination={false}
                   size="small"
+                  scroll={{ x: 720 }}
                 />
               </>
             ) : null}
@@ -848,7 +855,7 @@ const SubscriptionDetailPage = () => {
       </Modal>
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         <Card title="订阅信息">
-          <Descriptions bordered column={2} size="middle">
+          <Descriptions bordered column={isMobile ? 1 : 2} size="middle">
             <Descriptions.Item label={renderFieldLabel('状态', 'status')}>
               {renderStatusTag(subscription.status)}
             </Descriptions.Item>
@@ -897,7 +904,7 @@ const SubscriptionDetailPage = () => {
           </Descriptions>
         </Card>
         <Card title="关联 ID">
-          <Descriptions bordered column={2} size="middle">
+          <Descriptions bordered column={isMobile ? 1 : 2} size="middle">
             <Descriptions.Item label={renderFieldLabel('数据库主键', 'id')}>
               {renderTextValue(subscription.id)}
             </Descriptions.Item>

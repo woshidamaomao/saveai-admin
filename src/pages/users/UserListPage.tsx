@@ -1,5 +1,17 @@
 import { BarChartOutlined, DeleteOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons'
-import { Button, Form, Input, Popconfirm, Space, Table, Typography, message } from 'antd'
+import {
+  Button,
+  Card,
+  Form,
+  Grid,
+  Input,
+  List,
+  Popconfirm,
+  Space,
+  Table,
+  Typography,
+  message,
+} from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -9,6 +21,8 @@ import type { ApiUser } from '../../types/api'
 import { getErrorMessage } from '../../utils/error-message'
 
 const { Title } = Typography
+const { Text } = Typography
+const { useBreakpoint } = Grid
 
 const PAGE_SIZE = 10
 
@@ -27,6 +41,8 @@ const renderWrapText = (value?: string | null) => (
 const UserListPage = () => {
   const [form] = Form.useForm<{ email: string; uid: string }>()
   const navigate = useNavigate()
+  const screens = useBreakpoint()
+  const isMobile = !screens.md
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<ApiUser[]>([])
@@ -193,18 +209,18 @@ const UserListPage = () => {
       </Title>
       <Form
         form={form}
-        layout="inline"
+        layout={isMobile ? 'vertical' : 'inline'}
         style={{ marginBottom: 16, rowGap: 12 }}
         onFinish={handleSearch}
       >
         <Form.Item name="email" label="邮箱">
-          <Input allowClear placeholder="模糊搜索" style={{ width: 220 }} />
+          <Input allowClear placeholder="模糊搜索" style={{ width: isMobile ? '100%' : 220 }} />
         </Form.Item>
         <Form.Item name="uid" label="用户 UID">
-          <Input allowClear placeholder="模糊搜索" style={{ width: 200 }} />
+          <Input allowClear placeholder="模糊搜索" style={{ width: isMobile ? '100%' : 200 }} />
         </Form.Item>
         <Form.Item>
-          <Space>
+          <Space wrap>
             <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
               查询
             </Button>
@@ -212,6 +228,97 @@ const UserListPage = () => {
           </Space>
         </Form.Item>
       </Form>
+      {isMobile ? (
+        <List<ApiUser>
+          loading={loading}
+          dataSource={data}
+          pagination={{
+            current: page,
+            pageSize: PAGE_SIZE,
+            total,
+            showSizeChanger: false,
+            size: 'small',
+            onChange: (nextPage) => setPage(nextPage),
+          }}
+          renderItem={(item) => (
+            <List.Item style={{ paddingInline: 0 }}>
+              <Card
+                size="small"
+                hoverable
+                style={{ width: '100%' }}
+                onClick={() => navigate(`/users/${item.uid}`)}
+              >
+                <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                  <div>
+                    <Text type="secondary">邮箱</Text>
+                    <div>{renderWrapText(item.email)}</div>
+                  </div>
+                  <div>
+                    <Text type="secondary">姓名</Text>
+                    <div>{[item.firstName, item.lastName].filter(Boolean).join(' ') || '—'}</div>
+                  </div>
+                  <div>
+                    <Text type="secondary">角色</Text>
+                    <div>{item.role?.name ?? (item.role?.id != null ? String(item.role.id) : '—')}</div>
+                  </div>
+                  <div>
+                    <Text type="secondary">注册时间</Text>
+                    <div>
+                      <TimeDisplay value={item.createdAt} allowWrap />
+                    </div>
+                  </div>
+                  <Space wrap>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<EyeOutlined />}
+                      style={{ padding: 0 }}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        navigate(`/users/${item.uid}`)
+                      }}
+                    >
+                      详情
+                    </Button>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<BarChartOutlined />}
+                      style={{ padding: 0 }}
+                      href={`/users/usages?userUid=${encodeURIComponent(item.uid)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      用量
+                    </Button>
+                    <Popconfirm
+                      title="确定删除该用户？"
+                      description="删除后无法从此列表恢复，请确认。"
+                      okText="删除"
+                      cancelText="取消"
+                      okButtonProps={{ danger: true }}
+                      onConfirm={() => handleDelete(item.uid)}
+                    >
+                      <Button
+                        type="link"
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        loading={deletingUid === item.uid}
+                        style={{ padding: 0 }}
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        删除
+                      </Button>
+                    </Popconfirm>
+                  </Space>
+                </Space>
+              </Card>
+            </List.Item>
+          )}
+        />
+      ) : (
       <Table<ApiUser>
         rowKey="uid"
         loading={loading}
@@ -233,6 +340,7 @@ const UserListPage = () => {
           }
         }}
       />
+      )}
     </div>
   )
 }

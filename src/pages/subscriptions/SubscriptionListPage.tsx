@@ -1,5 +1,18 @@
 import { EyeOutlined, SearchOutlined } from '@ant-design/icons'
-import { Button, Form, Input, Select, Space, Table, Tag, Typography, message } from 'antd'
+import {
+  Button,
+  Card,
+  Form,
+  Grid,
+  Input,
+  List,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Typography,
+  message,
+} from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -9,6 +22,7 @@ import type { ApiSubscription } from '../../types/api'
 import { getErrorMessage } from '../../utils/error-message'
 
 const { Title } = Typography
+const { useBreakpoint } = Grid
 
 const PAGE_SIZE = 10
 
@@ -97,6 +111,8 @@ const renderSubscriptionTypeTag = (subscriptionType?: string | null) => {
 const SubscriptionListPage = () => {
   const [form] = Form.useForm<ListFilters>()
   const navigate = useNavigate()
+  const screens = useBreakpoint()
+  const isMobile = !screens.md
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<ApiSubscription[]>([])
@@ -270,35 +286,35 @@ const SubscriptionListPage = () => {
       </Title>
       <Form
         form={form}
-        layout="inline"
+        layout={isMobile ? 'vertical' : 'inline'}
         style={{ marginBottom: 16, rowGap: 12 }}
         onFinish={handleSearch}
       >
         <Form.Item name="subId" label="订阅号">
-          <Input allowClear placeholder="精确搜索" style={{ width: 180 }} />
+          <Input allowClear placeholder="精确搜索" style={{ width: isMobile ? '100%' : 180 }} />
         </Form.Item>
         <Form.Item name="userUid" label="用户 UID">
-          <Input allowClear placeholder="精确搜索" style={{ width: 180 }} />
+          <Input allowClear placeholder="精确搜索" style={{ width: isMobile ? '100%' : 180 }} />
         </Form.Item>
         <Form.Item name="email" label="邮箱">
-          <Input allowClear placeholder="模糊搜索" style={{ width: 220 }} />
+          <Input allowClear placeholder="模糊搜索" style={{ width: isMobile ? '100%' : 220 }} />
         </Form.Item>
         <Form.Item name="status" label="状态">
           <Select
             allowClear
             options={statusOptions}
             placeholder="选择状态"
-            style={{ width: 160 }}
+            style={{ width: isMobile ? '100%' : 160 }}
           />
         </Form.Item>
         <Form.Item name="priceId" label="Price ID">
-          <Input allowClear placeholder="精确搜索" style={{ width: 220 }} />
+          <Input allowClear placeholder="精确搜索" style={{ width: isMobile ? '100%' : 220 }} />
         </Form.Item>
         <Form.Item name="stripeSubscriptionId" label="Stripe Sub ID">
-          <Input allowClear placeholder="精确搜索" style={{ width: 240 }} />
+          <Input allowClear placeholder="精确搜索" style={{ width: isMobile ? '100%' : 240 }} />
         </Form.Item>
         <Form.Item>
-          <Space>
+          <Space wrap>
             <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
               查询
             </Button>
@@ -306,6 +322,75 @@ const SubscriptionListPage = () => {
           </Space>
         </Form.Item>
       </Form>
+      {isMobile ? (
+        <List<ApiSubscription>
+          loading={loading}
+          dataSource={data}
+          pagination={{
+            current: page,
+            pageSize: PAGE_SIZE,
+            total,
+            showSizeChanger: false,
+            size: 'small',
+            onChange: (nextPage) => setPage(nextPage),
+          }}
+          renderItem={(item) => (
+            <List.Item style={{ paddingInline: 0 }}>
+              <Card
+                size="small"
+                hoverable
+                style={{ width: '100%' }}
+                onClick={() => navigate(`/subscriptions/${item.subId}`)}
+              >
+                <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                  <Space wrap>
+                    {renderStatusTag(item.status)}
+                    {renderSubscriptionTypeTag(item.subscriptionType)}
+                  </Space>
+                  <div>
+                    <Typography.Text type="secondary">邮箱</Typography.Text>
+                    <div>{renderWrapText(item.userEmail)}</div>
+                  </div>
+                  <div>
+                    <Typography.Text type="secondary">周期开始</Typography.Text>
+                    <div>
+                      <TimeDisplay value={item.currentPeriodStart} allowWrap />
+                    </div>
+                  </div>
+                  <div>
+                    <Typography.Text type="secondary">周期结束</Typography.Text>
+                    <div>
+                      <TimeDisplay value={item.currentPeriodEnd} allowWrap />
+                    </div>
+                  </div>
+                  <Space wrap>
+                    <span>
+                      <Typography.Text type="secondary">是否试用：</Typography.Text>
+                      {renderBooleanTag(item.isTrial)}
+                    </span>
+                    <span>
+                      <Typography.Text type="secondary">取消自动订阅：</Typography.Text>
+                      {renderBooleanTag(item.cancelAtPeriodEnd)}
+                    </span>
+                  </Space>
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<EyeOutlined />}
+                    style={{ padding: 0, width: 'fit-content' }}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      navigate(`/subscriptions/${item.subId}`)
+                    }}
+                  >
+                    详情
+                  </Button>
+                </Space>
+              </Card>
+            </List.Item>
+          )}
+        />
+      ) : (
       <Table<ApiSubscription>
         rowKey="subId"
         loading={loading}
@@ -327,6 +412,7 @@ const SubscriptionListPage = () => {
           }
         }}
       />
+      )}
     </div>
   )
 }

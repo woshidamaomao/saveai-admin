@@ -1,5 +1,17 @@
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons'
-import { Button, DatePicker, Form, Input, Space, Table, Typography, message } from 'antd'
+import {
+  Button,
+  Card,
+  DatePicker,
+  Form,
+  Grid,
+  Input,
+  List,
+  Space,
+  Table,
+  Typography,
+  message,
+} from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
@@ -12,6 +24,8 @@ import type { ApiDailyUsage } from '../../types/api'
 import { getErrorMessage } from '../../utils/error-message'
 
 const { Title } = Typography
+const { Text } = Typography
+const { useBreakpoint } = Grid
 
 dayjs.extend(utc)
 
@@ -78,6 +92,8 @@ const areFiltersEqual = (left: ListFilters, right: ListFilters) =>
 const DailyUsageListPage = () => {
   const [form] = Form.useForm<ListFormValues>()
   const navigate = useNavigate()
+  const screens = useBreakpoint()
+  const isMobile = !screens.md
   const [searchParams, setSearchParams] = useSearchParams()
   const queryUserUid = searchParams.get('userUid')?.trim() ?? ''
   const [page, setPage] = useState(1)
@@ -231,25 +247,25 @@ const DailyUsageListPage = () => {
       </Title>
       <Form
         form={form}
-        layout="inline"
+        layout={isMobile ? 'vertical' : 'inline'}
         style={{ marginBottom: 16, rowGap: 12 }}
         onFinish={handleSearch}
       >
         <Form.Item name="userUid" label="用户 UID">
-          <Input allowClear placeholder="精确搜索" style={{ width: 200 }} />
+          <Input allowClear placeholder="精确搜索" style={{ width: isMobile ? '100%' : 200 }} />
         </Form.Item>
         <Form.Item name="email" label="邮箱">
-          <Input allowClear placeholder="精确搜索" style={{ width: 220 }} />
+          <Input allowClear placeholder="精确搜索" style={{ width: isMobile ? '100%' : 220 }} />
         </Form.Item>
         <Form.Item name="usageDateRange" label="用量日期">
           <DatePicker.RangePicker
             allowClear
             presets={createUsageDatePresets()}
-            style={{ width: 280 }}
+            style={{ width: isMobile ? '100%' : 280 }}
           />
         </Form.Item>
         <Form.Item>
-          <Space>
+          <Space wrap>
             <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
               查询
             </Button>
@@ -260,6 +276,57 @@ const DailyUsageListPage = () => {
           </Space>
         </Form.Item>
       </Form>
+      {isMobile ? (
+        <List<ApiDailyUsage>
+          loading={loading}
+          dataSource={data}
+          pagination={{
+            current: page,
+            pageSize: PAGE_SIZE,
+            total,
+            showSizeChanger: false,
+            size: 'small',
+            onChange: (nextPage) => setPage(nextPage),
+          }}
+          renderItem={(item) => (
+            <List.Item style={{ paddingInline: 0 }}>
+              <Card
+                size="small"
+                hoverable
+                style={{ width: '100%' }}
+                onClick={() => navigate(`/users/${item.userUid}`)}
+              >
+                <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                  <div>
+                    <Text type="secondary">邮箱</Text>
+                    <div>{renderWrapText(item.userEmail)}</div>
+                  </div>
+                  <div>
+                    <Text type="secondary">用量日期</Text>
+                    <div>{renderWrapText(item.usageDate)}</div>
+                  </div>
+                  <Space wrap>
+                    <span>
+                      <Text type="secondary">PDF 导出：</Text>
+                      {item.pdfExportUsedToday}
+                    </span>
+                    <span>
+                      <Text type="secondary">Notion 导出：</Text>
+                      {item.notionExportUsedToday}
+                    </span>
+                  </Space>
+                  <div>
+                    <Text type="secondary">更新时间</Text>
+                    <div>
+                      <TimeDisplay value={item.updatedAt} allowWrap />
+                    </div>
+                  </div>
+                </Space>
+              </Card>
+            </List.Item>
+          )}
+        />
+      ) : (
       <Table<ApiDailyUsage>
         rowKey="id"
         loading={loading}
@@ -281,6 +348,7 @@ const DailyUsageListPage = () => {
           }
         }}
       />
+      )}
     </div>
   )
 }
