@@ -60,6 +60,18 @@ const statusColorMap: Record<string, string> = {
   incomplete_expired: 'default',
 }
 
+const subscriptionTypeTextMap: Record<string, string> = {
+  monthly: '月订阅',
+  yearly: '年订阅',
+  one_time: '一次性付费',
+}
+
+const subscriptionTypeColorMap: Record<string, string> = {
+  monthly: 'blue',
+  yearly: 'gold',
+  one_time: 'purple',
+}
+
 const addDaysToDate = (value: string, days: number) => {
   const nextDate = dayjs(value).add(days, 'day')
   if (!nextDate.isValid()) {
@@ -91,6 +103,18 @@ const renderStatusTag = (status?: string) => {
   }
 
   return <Tag color={statusColorMap[status] ?? 'default'}>{status}</Tag>
+}
+
+const renderSubscriptionTypeTag = (subscriptionType?: string | null) => {
+  if (!subscriptionType) {
+    return '—'
+  }
+
+  return (
+    <Tag color={subscriptionTypeColorMap[subscriptionType] ?? 'default'}>
+      {subscriptionTypeTextMap[subscriptionType] ?? subscriptionType}
+    </Tag>
+  )
 }
 
 const canRefundSubscription = (subscription: ApiSubscription) => (
@@ -827,6 +851,9 @@ const SubscriptionDetailPage = () => {
           <Descriptions bordered column={2} size="middle">
             <Descriptions.Item label={renderFieldLabel('状态', 'status')}>
               {renderStatusTag(subscription.status)}
+            </Descriptions.Item>
+            <Descriptions.Item label={renderFieldLabel('订阅类型', 'subscriptionType')}>
+              {renderSubscriptionTypeTag(subscription.subscriptionType)}
             </Descriptions.Item>
             <Descriptions.Item label={renderFieldLabel('数量', 'quantity')}>
               {renderTextValue(subscription.quantity)}

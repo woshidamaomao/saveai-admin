@@ -44,6 +44,18 @@ const statusColorMap: Record<string, string> = {
   incomplete_expired: 'default',
 }
 
+const subscriptionTypeTextMap: Record<string, string> = {
+  monthly: '月订阅',
+  yearly: '年订阅',
+  one_time: '一次性付费',
+}
+
+const subscriptionTypeColorMap: Record<string, string> = {
+  monthly: 'blue',
+  yearly: 'gold',
+  one_time: 'purple',
+}
+
 const wrapCellStyle = {
   whiteSpace: 'normal' as const,
   overflowWrap: 'anywhere' as const,
@@ -68,6 +80,18 @@ const renderStatusTag = (status?: string) => {
   }
 
   return <Tag color={statusColorMap[status] ?? 'default'}>{status}</Tag>
+}
+
+const renderSubscriptionTypeTag = (subscriptionType?: string | null) => {
+  if (!subscriptionType) {
+    return '—'
+  }
+
+  return (
+    <Tag color={subscriptionTypeColorMap[subscriptionType] ?? 'default'}>
+      {subscriptionTypeTextMap[subscriptionType] ?? subscriptionType}
+    </Tag>
+  )
 }
 
 const SubscriptionListPage = () => {
@@ -185,6 +209,13 @@ const SubscriptionListPage = () => {
       key: 'status',
       width: 120,
       render: renderStatusTag,
+    },
+    {
+      title: '订阅类型',
+      dataIndex: 'subscriptionType',
+      key: 'subscriptionType',
+      width: 110,
+      render: renderSubscriptionTypeTag,
     },
     {
       title: '试用中',
