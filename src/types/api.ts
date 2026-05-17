@@ -13,6 +13,7 @@ export type ApiUser = {
   role?: Role | null
   status?: number
   subscriptionStatus?: string
+  subscriptionType?: 'monthly' | 'yearly' | 'one_time' | null
   planSlug?: string
   planName?: string
   subscriptionPeriodStart?: string | null
@@ -72,6 +73,7 @@ export type ApiSubscription = {
   userUid: string
   userEmail?: string | null
   userCreatedAt?: string | null
+  subscriptionType?: 'monthly' | 'yearly' | 'one_time' | null
   priceId: string
   productId: string
   stripeSubscriptionId: string
