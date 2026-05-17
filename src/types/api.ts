@@ -111,6 +111,12 @@ export type ApiProduct = {
   archivedAt: string | null
 }
 
+export type InfinityProductsResponse = {
+  data: ApiProduct[]
+  hasNextPage: boolean
+  total?: number
+}
+
 export type ApiPrice = {
   id: number
   productId: string
@@ -128,6 +134,12 @@ export type ApiPrice = {
   createdAt: string
   updatedAt: string
   archivedAt: string | null
+}
+
+export type InfinityPricesResponse = {
+  data: ApiPrice[]
+  hasNextPage: boolean
+  total?: number
 }
 
 export type ApiSubscriptionRefundFundingInvoice = {

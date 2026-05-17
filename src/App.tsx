@@ -4,6 +4,8 @@ import AdminLayout from './layouts/AdminLayout'
 import DashboardPage from './pages/DashboardPage'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
+import PriceListPage from './pages/products/PriceListPage'
+import ProductListPage from './pages/products/ProductListPage'
 import SettingsPage from './pages/SettingsPage'
 import SubscriptionDetailPage from './pages/subscriptions/SubscriptionDetailPage'
 import SubscriptionListPage from './pages/subscriptions/SubscriptionListPage'
@@ -24,6 +26,8 @@ const App = () => {
           <Route path="toolbox" element={<ToolboxPage />} />
           <Route path="toolbox/load-calculator" element={<LoadCalculatorPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="products" element={<ProductListPage />} />
+          <Route path="products/prices" element={<PriceListPage />} />
           <Route path="subscriptions" element={<SubscriptionListPage />} />
           <Route path="subscriptions/:subId" element={<SubscriptionDetailPage />} />
           <Route path="users/list" element={<UserListPage />} />

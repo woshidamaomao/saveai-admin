@@ -6,6 +6,7 @@ import {
   MenuOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  ShoppingOutlined,
   SettingOutlined,
   TeamOutlined,
   ToolOutlined,
@@ -19,7 +20,8 @@ import { useAuth } from '../contexts/AuthContext'
 
 const { Header, Sider, Content } = Layout
 const { useBreakpoint } = Grid
-const defaultOpenKeys = ['subscription-mgmt', 'user-mgmt']
+const productMenuKey = 'product-mgmt'
+const defaultOpenKeys = ['subscription-mgmt', productMenuKey, 'user-mgmt']
 
 const menuItems: MenuProps['items'] = [
   {
@@ -41,6 +43,23 @@ const menuItems: MenuProps['items'] = [
         key: '/subscriptions',
         icon: <UnorderedListOutlined />,
         label: '订阅列表',
+      },
+    ],
+  },
+  {
+    key: productMenuKey,
+    icon: <ShoppingOutlined />,
+    label: '商品管理',
+    children: [
+      {
+        key: '/products',
+        icon: <UnorderedListOutlined />,
+        label: '商品列表',
+      },
+      {
+        key: '/products/prices',
+        icon: <UnorderedListOutlined />,
+        label: '价格列表',
       },
     ],
   },
@@ -69,7 +88,7 @@ const menuItems: MenuProps['items'] = [
 ]
 
 const isGroupMenuKey = (key: string) => (
-  key === 'user-mgmt' || key === 'subscription-mgmt'
+  key === 'user-mgmt' || key === 'subscription-mgmt' || key === productMenuKey
 )
 
 const AdminLayout = () => {
@@ -91,6 +110,12 @@ const AdminLayout = () => {
     }
     if (path.startsWith('/settings')) {
       return ['/settings']
+    }
+    if (path.startsWith('/products/prices')) {
+      return ['/products/prices']
+    }
+    if (path.startsWith('/products')) {
+      return ['/products']
     }
     if (path.startsWith('/users')) {
       if (path.startsWith('/users/usages')) {
