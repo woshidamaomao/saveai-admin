@@ -1,6 +1,7 @@
 import {
   ArrowLeftOutlined,
   BarChartOutlined,
+  EditOutlined,
   FileTextOutlined,
   GiftOutlined,
 } from '@ant-design/icons'
@@ -9,6 +10,7 @@ import {
   Card,
   Descriptions,
   Form,
+  Input,
   InputNumber,
   Modal,
   Result,
@@ -25,7 +27,7 @@ import {
   createTrialSubscription,
   getSubscriptionTrialPriceOptions,
 } from '../../api/subscriptions'
-import { getUser } from '../../api/users'
+import { getUser, updateUserEmail } from '../../api/users'
 import { TimeDisplay } from '../../components/TimeDisplay'
 import type { ApiPrice, ApiSubscription, ApiUser, Role } from '../../types/api'
 import { getErrorMessage } from '../../utils/error-message'
@@ -35,6 +37,10 @@ const { Title, Text } = Typography
 type TrialSubscriptionFormValues = {
   priceId?: string
   trialDays?: number
+}
+
+type UpdateEmailFormValues = {
+  email?: string
 }
 
 const subscriptionStatusColorMap: Record<string, string> = {
@@ -178,6 +184,7 @@ const renderSubscriptionLink = (
 
 const UserDetailPage = () => {
   const [trialForm] = Form.useForm<TrialSubscriptionFormValues>()
+  const [emailForm] = Form.useForm<UpdateEmailFormValues>()
   const navigate = useNavigate()
   const { uid } = useParams<{ uid: string }>()
   const [loading, setLoading] = useState(true)
@@ -188,6 +195,8 @@ const UserDetailPage = () => {
   const [trialPriceOptions, setTrialPriceOptions] = useState<ApiPrice[]>([])
   const [trialPriceLoading, setTrialPriceLoading] = useState(false)
   const [trialSubmitting, setTrialSubmitting] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [emailSubmitting, setEmailSubmitting] = useState(false)
 
   const load = useCallback(async () => {
     if (!uid) {
@@ -280,6 +289,54 @@ const UserDetailPage = () => {
       message.error(getErrorMessage(error, '创建试用订阅失败'))
     } finally {
       setTrialSubmitting(false)
+    }
+  }
+
+  const openEmailModal = () => {
+    if (!user) {
+      return
+    }
+
+    emailForm.setFieldsValue({
+      email: user.email ?? '',
+    })
+    setEmailModalOpen(true)
+  }
+
+  const submitEmailUpdate = async () => {
+    if (!user) {
+      return
+    }
+
+    let values: UpdateEmailFormValues
+    try {
+      values = await emailForm.validateFields()
+    } catch {
+      return
+    }
+
+    const nextEmail = values.email?.trim().toLowerCase()
+    if (!nextEmail) {
+      return
+    }
+
+    if (nextEmail === user.email) {
+      setEmailModalOpen(false)
+      emailForm.resetFields()
+      return
+    }
+
+    setEmailSubmitting(true)
+    try {
+      const updatedUser = await updateUserEmail(user.uid, nextEmail)
+      setUser(updatedUser)
+      setEmailModalOpen(false)
+      emailForm.resetFields()
+      message.success('邮箱已更新，Stripe Customer 邮箱已同步')
+    } catch (error) {
+      message.error(getErrorMessage(error, '更新邮箱失败'))
+    } finally {
+      setEmailSubmitting(false)
     }
   }
 
@@ -391,8 +448,41 @@ const UserDetailPage = () => {
           </Form.Item>
         </Form>
       </Modal>
+      <Modal
+        title="更换邮箱"
+        open={emailModalOpen}
+        okText="保存"
+        cancelText="取消"
+        confirmLoading={emailSubmitting}
+        onCancel={() => setEmailModalOpen(false)}
+        onOk={() => void submitEmailUpdate()}
+      >
+        <Form form={emailForm} layout="vertical">
+          <Form.Item
+            name="email"
+            label="新邮箱"
+            rules={[
+              { required: true, message: '请输入新邮箱' },
+              { type: 'email', message: '邮箱格式不正确' },
+            ]}
+            normalize={(value) => (typeof value === 'string' ? value.trim().toLowerCase() : value)}
+          >
+            <Input placeholder="name@example.com" autoComplete="off" />
+          </Form.Item>
+          <Text type="secondary">
+            保存后会同步更新本地用户邮箱和 Stripe Customer 邮箱。
+          </Text>
+        </Form>
+      </Modal>
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        <Card title="用户信息">
+        <Card
+          title="用户信息"
+          extra={
+            <Button icon={<EditOutlined />} onClick={openEmailModal}>
+              更换邮箱
+            </Button>
+          }
+        >
           <Descriptions bordered column={2} size="middle">
             <Descriptions.Item label={renderFieldLabel('UID', 'uid')}>
               {renderTextValue(user.uid)}

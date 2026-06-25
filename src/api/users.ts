@@ -37,4 +37,9 @@ const getUser = async (uid: string) => {
   return data
 }
 
-export { deleteUser, getUser, getUsers }
+const updateUserEmail = async (uid: string, email: string) => {
+  const { data } = await api.patch<ApiUser>(`/users/${uid}/email`, { email })
+  return data
+}
+
+export { deleteUser, getUser, getUsers, updateUserEmail }
