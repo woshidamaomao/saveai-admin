@@ -1,10 +1,11 @@
-import { PlusOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons'
+import { EditOutlined, PlusOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons'
 import {
   Button,
   Card,
   Form,
   Grid,
   Input,
+  InputNumber,
   List,
   Modal,
   Popconfirm,
@@ -23,6 +24,7 @@ import {
   getStripePriceCandidates,
   importStripePrice,
   syncStripePrice,
+  updatePriceDisplay,
   updatePriceState,
 } from '../../api/prices'
 import { TimeDisplay } from '../../components/TimeDisplay'
@@ -41,6 +43,12 @@ type ListFilters = {
 type ImportPriceFormValues = {
   productId: string
   priceId: string
+}
+
+type PriceDisplayFormValues = {
+  skuKey?: string
+  monthlyPrice?: number | null
+  originalPrice?: number | null
 }
 
 const priceStateTextMap: Record<number, string> = {
@@ -84,17 +92,32 @@ const renderStripeState = (active?: boolean | null) => {
   return active ? <Tag color="success">Stripe 启用</Tag> : <Tag color="error">Stripe 停用</Tag>
 }
 
-const renderBillingInterval = (value?: number | null) => (
-  value == null ? '—' : billingIntervalTextMap[value] ?? value
-)
+const renderBillingInterval = (
+  value?: number | null,
+  billingMode?: number | null,
+  count?: number | null,
+) => {
+  if (billingMode === 2) return '一次性付款'
+  if (value == null) return '—'
+  if (count && count > 1) {
+    return value === 1 ? `每 ${count} 个月` : `每 ${count} 年`
+  }
+  return billingIntervalTextMap[value] ?? value
+}
 
 const formatPriceAmount = (price: Pick<ApiPrice, 'showPrice' | 'currency'>) => (
   `${price.showPrice} ${price.currency.toUpperCase()}`
 )
 
+const formatOptionalPriceAmount = (
+  amount: number | null | undefined,
+  currency: string,
+) => (amount == null ? '—' : `${amount} ${currency.toUpperCase()}`)
+
 const PriceListPage = () => {
   const [form] = Form.useForm<ListFilters>()
   const [importForm] = Form.useForm<ImportPriceFormValues>()
+  const [priceDisplayForm] = Form.useForm<PriceDisplayFormValues>()
   const screens = useBreakpoint()
   const isMobile = !screens.md
   const [page, setPage] = useState(1)
@@ -109,6 +132,8 @@ const PriceListPage = () => {
   const [candidates, setCandidates] = useState<StripePriceCandidate[]>([])
   const [syncingId, setSyncingId] = useState<number | null>(null)
   const [stateUpdatingId, setStateUpdatingId] = useState<number | null>(null)
+  const [editingPrice, setEditingPrice] = useState<ApiPrice | null>(null)
+  const [priceDisplayUpdating, setPriceDisplayUpdating] = useState(false)
   const [applied, setApplied] = useState<ListFilters>({ priceId: '', productId: '' })
 
   const load = useCallback(async (p: number, filters: ListFilters) => {
@@ -238,6 +263,51 @@ const PriceListPage = () => {
     }
   }
 
+  const openPriceDisplayModal = (price: ApiPrice) => {
+    setEditingPrice(price)
+    priceDisplayForm.setFieldsValue({
+      skuKey: price.skuKey ?? undefined,
+      monthlyPrice: price.monthlyPrice,
+      originalPrice: price.originalPrice,
+    })
+  }
+
+  const closePriceDisplayModal = () => {
+    if (priceDisplayUpdating) return
+    setEditingPrice(null)
+    priceDisplayForm.resetFields()
+  }
+
+  const handlePriceDisplayUpdate = async () => {
+    if (!editingPrice) return
+    let values: PriceDisplayFormValues
+    try {
+      values = await priceDisplayForm.validateFields()
+    } catch {
+      return
+    }
+
+    const normalizedSkuKey = values.skuKey?.trim().toLowerCase() || null
+    setPriceDisplayUpdating(true)
+    try {
+      await updatePriceDisplay(editingPrice.id, {
+        skuKey: normalizedSkuKey,
+        originalPrice: values.originalPrice ?? null,
+        ...(editingPrice.billingMode === 2
+          ? { monthlyPrice: values.monthlyPrice ?? null }
+          : {}),
+      })
+      message.success('价格展示信息已更新')
+      setEditingPrice(null)
+      priceDisplayForm.resetFields()
+      await load(page, applied)
+    } catch (error) {
+      message.error(getErrorMessage(error, '更新价格展示信息失败'))
+    } finally {
+      setPriceDisplayUpdating(false)
+    }
+  }
+
   const renderActions = (price: ApiPrice) => (
     <Space wrap>
       <Button
@@ -247,6 +317,9 @@ const PriceListPage = () => {
         onClick={() => void handleSync(price)}
       >
         同步
+      </Button>
+      <Button size="small" icon={<EditOutlined />} onClick={() => openPriceDisplayModal(price)}>
+        编辑
       </Button>
       {price.state === 1 || price.state === 2 ? (
         <Popconfirm
@@ -277,17 +350,42 @@ const PriceListPage = () => {
       render: renderWrapText,
     },
     {
+      title: 'SKU Key',
+      dataIndex: 'skuKey',
+      key: 'skuKey',
+      render: renderWrapText,
+    },
+    {
+      title: '描述',
+      dataIndex: 'description',
+      key: 'description',
+      render: renderWrapText,
+    },
+    {
       title: '周期',
       dataIndex: 'billingInterval',
       key: 'billingInterval',
       width: 100,
-      render: renderBillingInterval,
+      render: (value, row) =>
+        renderBillingInterval(value, row.billingMode, row.billingIntervalCount),
     },
     {
       title: '价格',
       key: 'showPrice',
       width: 120,
       render: (_, row) => formatPriceAmount(row),
+    },
+    {
+      title: '月均价',
+      key: 'monthlyPrice',
+      width: 120,
+      render: (_, row) => formatOptionalPriceAmount(row.monthlyPrice, row.currency),
+    },
+    {
+      title: '划线原价',
+      key: 'originalPrice',
+      width: 120,
+      render: (_, row) => formatOptionalPriceAmount(row.originalPrice, row.currency),
     },
     {
       title: '本地状态',
@@ -368,7 +466,13 @@ const PriceListPage = () => {
                   <Space wrap>
                     {renderStateTag(item.state)}
                     {renderStripeState(item.stripeActive)}
-                    <Tag color="blue">{renderBillingInterval(item.billingInterval)}</Tag>
+                    <Tag color={item.billingMode === 2 ? 'purple' : 'blue'}>
+                      {renderBillingInterval(
+                        item.billingInterval,
+                        item.billingMode,
+                        item.billingIntervalCount,
+                      )}
+                    </Tag>
                   </Space>
                   <div>
                     <Text type="secondary">商品</Text>
@@ -378,7 +482,23 @@ const PriceListPage = () => {
                     <Text type="secondary">Price ID</Text>
                     <div>{renderWrapText(item.priceId)}</div>
                   </div>
+                  <div>
+                    <Text type="secondary">SKU Key</Text>
+                    <div>{renderWrapText(item.skuKey)}</div>
+                  </div>
+                  <div>
+                    <Text type="secondary">描述</Text>
+                    <div>{renderWrapText(item.description)}</div>
+                  </div>
                   <div>{formatPriceAmount(item)}</div>
+                  <div>
+                    <Text type="secondary">月均价：</Text>
+                    {formatOptionalPriceAmount(item.monthlyPrice, item.currency)}
+                  </div>
+                  <div>
+                    <Text type="secondary">划线原价：</Text>
+                    {formatOptionalPriceAmount(item.originalPrice, item.currency)}
+                  </div>
                   <div>
                     <Text type="secondary">最后同步：</Text>
                     <TimeDisplay value={item.stripeSyncedAt} allowWrap />
@@ -440,7 +560,7 @@ const PriceListPage = () => {
             name="priceId"
             label="Stripe 价格"
             rules={[{ required: true, message: '请选择 Stripe 价格' }]}
-            extra="仅展示 Stripe 中启用、尚未入库且系统支持的月付或年付价格。"
+            extra="仅展示 Stripe 中启用、尚未入库且系统支持的一次性、月付或年付价格。"
           >
             <Select
               showSearch
@@ -450,9 +570,66 @@ const PriceListPage = () => {
               placeholder={candidatesLoading ? '正在从 Stripe 加载' : '请选择价格'}
               notFoundContent={candidatesLoading ? '加载中…' : '没有可导入的价格'}
               options={candidates.map((candidate) => ({
-                label: `${formatPriceAmount(candidate)} / ${renderBillingInterval(candidate.billingInterval)} / ${candidate.priceId}`,
+                label: `${formatPriceAmount(candidate)} / ${renderBillingInterval(candidate.billingInterval, candidate.billingMode, candidate.billingIntervalCount)}${candidate.description ? ` / ${candidate.description}` : ''} / ${candidate.priceId}`,
                 value: candidate.priceId,
               }))}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+      <Modal
+        title="编辑价格展示信息"
+        open={editingPrice !== null}
+        okText="保存"
+        cancelText="取消"
+        confirmLoading={priceDisplayUpdating}
+        onCancel={closePriceDisplayModal}
+        onOk={() => void handlePriceDisplayUpdate()}
+      >
+        <Form form={priceDisplayForm} layout="vertical">
+          <Form.Item
+            name="skuKey"
+            label="SKU Key"
+            extra="留空并保存可清除；非空值必须全局唯一。"
+            rules={[
+              { max: 100, message: '最多 100 个字符' },
+              {
+                pattern: /^[a-z0-9_]+$/,
+                message: '只能包含小写字母、数字和下划线',
+              },
+            ]}
+          >
+            <Input allowClear placeholder="例如 stripe_yearly_usd" />
+          </Form.Item>
+          <Form.Item
+            name="monthlyPrice"
+            label="每月展示价格"
+            extra={
+              editingPrice?.billingMode === 2
+                ? '一次性价格由管理员填写；留空表示不展示月均价。'
+                : '周期订阅由 Stripe 价格和计费周期自动计算，不可编辑。'
+            }
+            rules={[{ type: 'number', min: 0, message: '请输入大于或等于 0 的金额' }]}
+          >
+            <InputNumber
+              disabled={editingPrice?.billingMode !== 2}
+              min={0}
+              precision={2}
+              style={{ width: '100%' }}
+              placeholder="例如 8.34"
+            />
+          </Form.Item>
+          <Form.Item
+            name="originalPrice"
+            label="划线原价"
+            extra="手动填写，留空表示前端不展示划线原价。"
+            rules={[{ type: 'number', min: 0, message: '请输入大于或等于 0 的金额' }]}
+          >
+            <InputNumber
+              min={0}
+              precision={2}
+              style={{ width: '100%' }}
+              placeholder="例如 12.00"
             />
           </Form.Item>
         </Form>

@@ -1,8 +1,9 @@
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import { DownloadOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Card, Form, Grid, Input, List, Modal, Select, Space, Table, Tag, Typography, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useCallback, useEffect, useState } from 'react'
 import { getProducts, getStripeProductCandidates, importStripeProduct } from '../../api/products'
+import { exportProductPrices } from '../../api/prices'
 import { TimeDisplay } from '../../components/TimeDisplay'
 import type { ApiProduct, StripeProductCandidate } from '../../types/api'
 import { getErrorMessage } from '../../utils/error-message'
@@ -75,6 +76,7 @@ const ProductListPage = () => {
   const [importModalOpen, setImportModalOpen] = useState(false)
   const [candidatesLoading, setCandidatesLoading] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [downloadingProductId, setDownloadingProductId] = useState<string | null>(null)
   const [candidates, setCandidates] = useState<StripeProductCandidate[]>([])
   const [applied, setApplied] = useState<ListFilters>({
     productId: '',
@@ -165,6 +167,30 @@ const ProductListPage = () => {
     }
   }
 
+  const handleDownloadPrices = async (product: ApiProduct) => {
+    setDownloadingProductId(product.productId)
+    try {
+      const payload = await exportProductPrices(product.productId)
+      const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], {
+        type: 'application/json;charset=utf-8',
+      })
+      const objectUrl = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      const safeSlug = (product.slug || product.productId).replace(/[^a-zA-Z0-9_-]/g, '_')
+      anchor.href = objectUrl
+      anchor.download = `${safeSlug}-prices.json`
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(objectUrl)
+      message.success(`已下载 ${payload.prices.length} 条价格`)
+    } catch (error) {
+      message.error(getErrorMessage(error, '下载价格 JSON 失败'))
+    } finally {
+      setDownloadingProductId(null)
+    }
+  }
+
   const totalPages = total === 0 ? 0 : Math.ceil(total / PAGE_SIZE)
 
   const columns: ColumnsType<ApiProduct> = [
@@ -226,6 +252,21 @@ const ProductListPage = () => {
       dataIndex: 'updatedAt',
       key: 'updatedAt',
       render: (value?: string | null) => <TimeDisplay value={value} allowWrap />,
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 150,
+      render: (_, product) => (
+        <Button
+          size="small"
+          icon={<DownloadOutlined />}
+          loading={downloadingProductId === product.productId}
+          onClick={() => void handleDownloadPrices(product)}
+        >
+          下载价格 JSON
+        </Button>
+      ),
     },
   ]
 
@@ -309,6 +350,14 @@ const ProductListPage = () => {
                       {renderLimitText(item.wordExportDailyLimit)}
                     </span>
                   </Space>
+                  <Button
+                    size="small"
+                    icon={<DownloadOutlined />}
+                    loading={downloadingProductId === item.productId}
+                    onClick={() => void handleDownloadPrices(item)}
+                  >
+                    下载价格 JSON
+                  </Button>
                 </Space>
               </Card>
             </List.Item>

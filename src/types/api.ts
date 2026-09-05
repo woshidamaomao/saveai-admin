@@ -128,10 +128,15 @@ export type ApiPrice = {
   productId: string
   product?: ApiProduct
   priceId: string
-  billingInterval: number
+  skuKey: string | null
+  description: string | null
+  billingInterval: number | null
+  billingIntervalCount: number | null
   billingMode: number
   unitAmount: number
   showPrice: number
+  monthlyPrice: number | null
+  originalPrice: number | null
   currency: string
   trialDays: number
   state: number
@@ -147,10 +152,13 @@ export type ApiPrice = {
 export type StripePriceCandidate = {
   priceId: string
   productId: string
-  billingInterval: number
+  description: string | null
+  billingInterval: number | null
+  billingIntervalCount: number | null
   billingMode: number
   unitAmount: number
   showPrice: number
+  monthlyPrice: number | null
   currency: string
   stripeActive: boolean
 }
@@ -159,6 +167,13 @@ export type InfinityPricesResponse = {
   data: ApiPrice[]
   hasNextPage: boolean
   total?: number
+}
+
+export type ProductPricesExport = {
+  schemaVersion: number
+  exportedAt: string
+  product: ApiProduct
+  prices: ApiPrice[]
 }
 
 export type ApiSubscriptionRefundFundingInvoice = {

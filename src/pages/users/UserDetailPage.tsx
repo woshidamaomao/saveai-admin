@@ -117,7 +117,17 @@ const canCreateTrialSubscription = (user: ApiUser) => {
   return status !== 'active' && status !== 'trialing'
 }
 
-const getBillingIntervalText = (value: number) => {
+const getBillingIntervalText = (
+  value: number | null,
+  billingMode?: number,
+  count?: number | null,
+) => {
+  if (billingMode === 2) {
+    return '一次性付款'
+  }
+  if (count && count > 1) {
+    return value === 1 ? `每 ${count} 个月` : `每 ${count} 年`
+  }
   if (value === 1) {
     return '月付'
   }
@@ -125,7 +135,7 @@ const getBillingIntervalText = (value: number) => {
     return '年付'
   }
 
-  return `周期 ${value}`
+  return value == null ? '未知周期' : `周期 ${value}`
 }
 
 const formatPriceAmount = (price: ApiPrice) => {
@@ -144,7 +154,7 @@ const formatPriceAmount = (price: ApiPrice) => {
 
 const getPriceOptionLabel = (price: ApiPrice) => {
   const productName = price.product?.name || price.productId
-  return `${productName} / ${getBillingIntervalText(price.billingInterval)} / ${formatPriceAmount(price)} / ${price.priceId}`
+  return `${productName} / ${getBillingIntervalText(price.billingInterval, price.billingMode, price.billingIntervalCount)} / ${formatPriceAmount(price)} / ${price.priceId}`
 }
 
 const formatUsage = (used?: number, limit?: number) => {

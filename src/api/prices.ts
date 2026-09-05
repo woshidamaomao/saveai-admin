@@ -1,4 +1,9 @@
-import type { ApiPrice, InfinityPricesResponse, StripePriceCandidate } from '../types/api'
+import type {
+  ApiPrice,
+  InfinityPricesResponse,
+  ProductPricesExport,
+  StripePriceCandidate,
+} from '../types/api'
 import { api } from './client'
 
 type PriceFilters = {
@@ -57,5 +62,24 @@ export const syncStripePrice = async (id: number) => {
 
 export const updatePriceState = async (id: number, state: 1 | 2) => {
   const { data } = await api.patch<ApiPrice>(`/prices/${id}/state`, { state })
+  return data
+}
+
+export const updatePriceDisplay = async (
+  id: number,
+  payload: {
+    skuKey?: string | null
+    monthlyPrice?: number | null
+    originalPrice?: number | null
+  },
+) => {
+  const { data } = await api.patch<ApiPrice>(`/prices/${id}/display`, payload)
+  return data
+}
+
+export const exportProductPrices = async (productId: string) => {
+  const { data } = await api.get<ProductPricesExport>('/prices/export-json', {
+    params: { productId },
+  })
   return data
 }
