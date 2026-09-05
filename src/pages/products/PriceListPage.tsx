@@ -1,16 +1,15 @@
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import { PlusOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons'
 import {
   Button,
   Card,
   Form,
   Grid,
   Input,
-  InputNumber,
   List,
   Modal,
+  Popconfirm,
   Select,
   Space,
-  Switch,
   Table,
   Tag,
   Typography,
@@ -19,9 +18,15 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import { useCallback, useEffect, useState } from 'react'
 import { getProducts } from '../../api/products'
-import { createPrice, getPrices } from '../../api/prices'
+import {
+  getPrices,
+  getStripePriceCandidates,
+  importStripePrice,
+  syncStripePrice,
+  updatePriceState,
+} from '../../api/prices'
 import { TimeDisplay } from '../../components/TimeDisplay'
-import type { ApiPrice, ApiProduct } from '../../types/api'
+import type { ApiPrice, ApiProduct, StripePriceCandidate } from '../../types/api'
 import { getErrorMessage } from '../../utils/error-message'
 
 const { Title, Text } = Typography
@@ -33,56 +38,14 @@ type ListFilters = {
   productId: string
 }
 
-type CreatePriceFormValues = {
+type ImportPriceFormValues = {
   productId: string
   priceId: string
-  billingMode: number
-  billingInterval: number
-  currency: string
-  showPrice: number
-  unitAmount: number
-  trialDays: number
-  state: number
-  isDefault: boolean
-  displayOrder: number
 }
-
-const currencyOptions = [
-  { label: 'USD - 美元', value: 'USD' },
-  { label: 'EUR - 欧元', value: 'EUR' },
-  { label: 'GBP - 英镑', value: 'GBP' },
-  { label: 'CAD - 加拿大元', value: 'CAD' },
-  { label: 'AUD - 澳大利亚元', value: 'AUD' },
-  { label: 'CHF - 瑞士法郎', value: 'CHF' },
-  { label: 'JPY - 日元', value: 'JPY' },
-  { label: 'SEK - 瑞典克朗', value: 'SEK' },
-  { label: 'NOK - 挪威克朗', value: 'NOK' },
-  { label: 'DKK - 丹麦克朗', value: 'DKK' },
-  { label: 'NZD - 新西兰元', value: 'NZD' },
-  { label: 'SGD - 新加坡元', value: 'SGD' },
-  { label: 'HKD - 港币', value: 'HKD' },
-  { label: 'CNY - 人民币', value: 'CNY' },
-]
-
-const billingModeOptions = [
-  { label: '普通订阅', value: 1 },
-  { label: '一次性付费', value: 2 },
-]
-
-const billingIntervalOptions = [
-  { label: '月卡', value: 1 },
-  { label: '年卡', value: 2 },
-]
-
-const priceStateOptions = [
-  { label: '启用', value: 1 },
-  { label: '隐藏', value: 2 },
-  { label: '归档', value: 3 },
-]
 
 const priceStateTextMap: Record<number, string> = {
   1: '启用',
-  2: '隐藏',
+  2: '停用',
   3: '归档',
 }
 
@@ -97,11 +60,6 @@ const billingIntervalTextMap: Record<number, string> = {
   2: '年订阅',
 }
 
-const billingModeTextMap: Record<number, string> = {
-  1: '普通订阅',
-  2: '一次性付费',
-}
-
 const wrapCellStyle = {
   whiteSpace: 'normal' as const,
   overflowWrap: 'anywhere' as const,
@@ -113,10 +71,7 @@ const renderWrapText = (value?: string | number | null) => (
 )
 
 const renderStateTag = (state?: number | null) => {
-  if (state == null) {
-    return '—'
-  }
-
+  if (state == null) return '—'
   return (
     <Tag color={priceStateColorMap[state] ?? 'default'}>
       {priceStateTextMap[state] ?? state}
@@ -124,43 +79,37 @@ const renderStateTag = (state?: number | null) => {
   )
 }
 
-const renderBooleanTag = (value?: boolean | null) => {
-  if (value == null) {
-    return '—'
-  }
-
-  return value ? <Tag color="blue">是</Tag> : <Tag>否</Tag>
+const renderStripeState = (active?: boolean | null) => {
+  if (active == null) return <Tag>未同步</Tag>
+  return active ? <Tag color="success">Stripe 启用</Tag> : <Tag color="error">Stripe 停用</Tag>
 }
 
 const renderBillingInterval = (value?: number | null) => (
   value == null ? '—' : billingIntervalTextMap[value] ?? value
 )
 
-const renderBillingMode = (value?: number | null) => (
-  value == null ? '—' : billingModeTextMap[value] ?? value
-)
-
-const formatPriceAmount = (price: ApiPrice) => (
+const formatPriceAmount = (price: Pick<ApiPrice, 'showPrice' | 'currency'>) => (
   `${price.showPrice} ${price.currency.toUpperCase()}`
 )
 
 const PriceListPage = () => {
   const [form] = Form.useForm<ListFilters>()
-  const [createForm] = Form.useForm<CreatePriceFormValues>()
+  const [importForm] = Form.useForm<ImportPriceFormValues>()
   const screens = useBreakpoint()
   const isMobile = !screens.md
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<ApiPrice[]>([])
   const [total, setTotal] = useState(0)
-  const [createModalOpen, setCreateModalOpen] = useState(false)
-  const [creating, setCreating] = useState(false)
+  const [importModalOpen, setImportModalOpen] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [productsLoading, setProductsLoading] = useState(false)
+  const [candidatesLoading, setCandidatesLoading] = useState(false)
   const [products, setProducts] = useState<ApiProduct[]>([])
-  const [applied, setApplied] = useState<ListFilters>({
-    priceId: '',
-    productId: '',
-  })
+  const [candidates, setCandidates] = useState<StripePriceCandidate[]>([])
+  const [syncingId, setSyncingId] = useState<number | null>(null)
+  const [stateUpdatingId, setStateUpdatingId] = useState<number | null>(null)
+  const [applied, setApplied] = useState<ListFilters>({ priceId: '', productId: '' })
 
   const load = useCallback(async (p: number, filters: ListFilters) => {
     setLoading(true)
@@ -184,22 +133,6 @@ const PriceListPage = () => {
     }
   }, [])
 
-  const loadProducts = useCallback(async () => {
-    setProductsLoading(true)
-    try {
-      const res = await getProducts({
-        page: 1,
-        limit: 50,
-      })
-      setProducts(res.data)
-    } catch (error) {
-      message.error(getErrorMessage(error, '加载商品选项失败'))
-      setProducts([])
-    } finally {
-      setProductsLoading(false)
-    }
-  }, [])
-
   useEffect(() => {
     void load(page, applied)
   }, [applied, load, page])
@@ -219,65 +152,118 @@ const PriceListPage = () => {
     setPage(1)
   }
 
-  const openCreateModal = () => {
-    createForm.setFieldsValue({
-      billingMode: 1,
-      billingInterval: 1,
-      currency: 'USD',
-      trialDays: 0,
-      state: 1,
-      isDefault: false,
-      displayOrder: 0,
-    })
-    setCreateModalOpen(true)
-    void loadProducts()
-  }
-
-  const closeCreateModal = () => {
-    if (creating) {
-      return
-    }
-
-    setCreateModalOpen(false)
-    createForm.resetFields()
-  }
-
-  const handleCreatePrice = async () => {
-    let values: CreatePriceFormValues
+  const openImportModal = async () => {
+    importForm.resetFields()
+    setCandidates([])
+    setImportModalOpen(true)
+    setProductsLoading(true)
     try {
-      values = await createForm.validateFields()
+      const res = await getProducts({ page: 1, limit: 50 })
+      setProducts(res.data)
+    } catch (error) {
+      message.error(getErrorMessage(error, '加载商品选项失败'))
+      setProducts([])
+    } finally {
+      setProductsLoading(false)
+    }
+  }
+
+  const loadCandidates = async (productId: string) => {
+    importForm.setFieldValue('priceId', undefined)
+    setCandidates([])
+    setCandidatesLoading(true)
+    try {
+      setCandidates(await getStripePriceCandidates(productId))
+    } catch (error) {
+      message.error(getErrorMessage(error, '加载 Stripe 价格失败'))
+    } finally {
+      setCandidatesLoading(false)
+    }
+  }
+
+  const closeImportModal = () => {
+    if (importing) return
+    setImportModalOpen(false)
+    importForm.resetFields()
+    setCandidates([])
+  }
+
+  const handleImport = async () => {
+    let values: ImportPriceFormValues
+    try {
+      values = await importForm.validateFields()
     } catch {
       return
     }
-
-    setCreating(true)
+    setImporting(true)
     try {
-      await createPrice({
-        productId: values.productId,
-        priceId: values.priceId.trim(),
-        billingMode: values.billingMode,
-        billingInterval: values.billingInterval,
-        currency: values.currency,
-        showPrice: values.showPrice,
-        unitAmount: values.unitAmount,
-        trialDays: values.trialDays,
-        state: values.state,
-        isDefault: values.isDefault,
-        displayOrder: values.displayOrder,
-      })
-      message.success('价格已创建')
-      setCreateModalOpen(false)
-      createForm.resetFields()
+      await importStripePrice(values.priceId)
+      message.success('价格已从 Stripe 导入')
+      setImportModalOpen(false)
+      importForm.resetFields()
+      setCandidates([])
       await load(page, applied)
     } catch (error) {
-      message.error(getErrorMessage(error, '创建价格失败'))
+      message.error(getErrorMessage(error, '导入价格失败'))
     } finally {
-      setCreating(false)
+      setImporting(false)
     }
   }
 
-  const totalPages = total === 0 ? 0 : Math.ceil(total / PAGE_SIZE)
+  const handleSync = async (price: ApiPrice) => {
+    setSyncingId(price.id)
+    try {
+      await syncStripePrice(price.id)
+      message.success('价格已同步')
+      await load(page, applied)
+    } catch (error) {
+      message.error(getErrorMessage(error, '同步价格失败'))
+    } finally {
+      setSyncingId(null)
+    }
+  }
 
+  const handleStateChange = async (price: ApiPrice) => {
+    if (price.state !== 1 && price.state !== 2) return
+    const nextState: 1 | 2 = price.state === 1 ? 2 : 1
+    setStateUpdatingId(price.id)
+    try {
+      await updatePriceState(price.id, nextState)
+      message.success(nextState === 1 ? '价格已启用' : '价格已停用')
+      await load(page, applied)
+    } catch (error) {
+      message.error(getErrorMessage(error, '更新价格状态失败'))
+    } finally {
+      setStateUpdatingId(null)
+    }
+  }
+
+  const renderActions = (price: ApiPrice) => (
+    <Space wrap>
+      <Button
+        size="small"
+        icon={<SyncOutlined />}
+        loading={syncingId === price.id}
+        onClick={() => void handleSync(price)}
+      >
+        同步
+      </Button>
+      {price.state === 1 || price.state === 2 ? (
+        <Popconfirm
+          title={`确定${price.state === 1 ? '停用' : '启用'}这个价格吗？`}
+          okText="确定"
+          cancelText="取消"
+          onConfirm={() => void handleStateChange(price)}
+        >
+          <Button size="small" loading={stateUpdatingId === price.id}>
+            {price.state === 1 ? '停用' : '启用'}
+          </Button>
+        </Popconfirm>
+      ) : null}
+    </Space>
+  )
+
+  const totalPages = total === 0 ? 0 : Math.ceil(total / PAGE_SIZE)
   const columns: ColumnsType<ApiPrice> = [
     {
       title: '商品',
@@ -288,53 +274,47 @@ const PriceListPage = () => {
       title: 'Price ID',
       dataIndex: 'priceId',
       key: 'priceId',
-      render: (value?: string | null) => renderWrapText(value),
+      render: renderWrapText,
     },
     {
       title: '周期',
       dataIndex: 'billingInterval',
       key: 'billingInterval',
-      width: 110,
+      width: 100,
       render: renderBillingInterval,
     },
     {
-      title: '计费模式',
-      dataIndex: 'billingMode',
-      key: 'billingMode',
-      width: 120,
-      render: renderBillingMode,
-    },
-    {
-      title: '展示价格',
+      title: '价格',
       key: 'showPrice',
       width: 120,
       render: (_, row) => formatPriceAmount(row),
     },
     {
-      title: '试用天数',
-      dataIndex: 'trialDays',
-      key: 'trialDays',
-      width: 100,
-    },
-    {
-      title: '默认',
-      dataIndex: 'isDefault',
-      key: 'isDefault',
-      width: 80,
-      render: renderBooleanTag,
-    },
-    {
-      title: '状态',
+      title: '本地状态',
       dataIndex: 'state',
       key: 'state',
-      width: 90,
+      width: 100,
       render: renderStateTag,
     },
     {
-      title: '更新时间',
-      dataIndex: 'updatedAt',
-      key: 'updatedAt',
+      title: 'Stripe 状态',
+      dataIndex: 'stripeActive',
+      key: 'stripeActive',
+      width: 120,
+      render: renderStripeState,
+    },
+    {
+      title: '最后同步',
+      dataIndex: 'stripeSyncedAt',
+      key: 'stripeSyncedAt',
+      width: 180,
       render: (value?: string | null) => <TimeDisplay value={value} allowWrap />,
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 180,
+      render: (_, row) => renderActions(row),
     },
   ]
 
@@ -345,11 +325,9 @@ const PriceListPage = () => {
         style={{ width: '100%', justifyContent: 'space-between', marginBottom: 16 }}
         wrap
       >
-        <Title level={4} style={{ marginTop: 0, marginBottom: 0 }}>
-          价格列表
-        </Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
-          新建价格
+        <Title level={4} style={{ marginTop: 0, marginBottom: 0 }}>价格列表</Title>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => void openImportModal()}>
+          从 Stripe 创建
         </Button>
       </Space>
       <Form
@@ -366,9 +344,7 @@ const PriceListPage = () => {
         </Form.Item>
         <Form.Item>
           <Space wrap>
-            <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-              查询
-            </Button>
+            <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>查询</Button>
             <Button onClick={handleReset}>重置</Button>
           </Space>
         </Form.Item>
@@ -383,7 +359,7 @@ const PriceListPage = () => {
             total,
             showSizeChanger: false,
             size: 'small',
-            onChange: (nextPage) => setPage(nextPage),
+            onChange: setPage,
           }}
           renderItem={(item) => (
             <List.Item style={{ paddingInline: 0 }}>
@@ -391,8 +367,8 @@ const PriceListPage = () => {
                 <Space direction="vertical" size={8} style={{ width: '100%' }}>
                   <Space wrap>
                     {renderStateTag(item.state)}
+                    {renderStripeState(item.stripeActive)}
                     <Tag color="blue">{renderBillingInterval(item.billingInterval)}</Tag>
-                    {renderBooleanTag(item.isDefault)}
                   </Space>
                   <div>
                     <Text type="secondary">商品</Text>
@@ -402,16 +378,12 @@ const PriceListPage = () => {
                     <Text type="secondary">Price ID</Text>
                     <div>{renderWrapText(item.priceId)}</div>
                   </div>
-                  <Space wrap>
-                    <span>
-                      <Text type="secondary">价格：</Text>
-                      {formatPriceAmount(item)}
-                    </span>
-                    <span>
-                      <Text type="secondary">试用：</Text>
-                      {item.trialDays} 天
-                    </span>
-                  </Space>
+                  <div>{formatPriceAmount(item)}</div>
+                  <div>
+                    <Text type="secondary">最后同步：</Text>
+                    <TimeDisplay value={item.stripeSyncedAt} allowWrap />
+                  </div>
+                  {renderActions(item)}
                 </Space>
               </Card>
             </List.Item>
@@ -423,145 +395,65 @@ const PriceListPage = () => {
           loading={loading}
           columns={columns}
           dataSource={data}
-          tableLayout="fixed"
+          scroll={{ x: 1200 }}
           pagination={{
             current: page,
             pageSize: PAGE_SIZE,
             total,
             showSizeChanger: false,
             showLessItems: true,
-            showTotal: (t, range) =>
-              `${range[0]}-${range[1]} 条，共 ${t} 条价格 · 共 ${totalPages} 页`,
+            showTotal: (t, range) => `${range[0]}-${range[1]} 条，共 ${t} 条价格 · 共 ${totalPages} 页`,
           }}
           onChange={(pagination) => {
-            if (pagination.current && pagination.current !== page) {
-              setPage(pagination.current)
-            }
+            if (pagination.current && pagination.current !== page) setPage(pagination.current)
           }}
         />
       )}
       <Modal
-        title="新建价格"
-        open={createModalOpen}
+        title="从 Stripe 创建价格"
+        open={importModalOpen}
         okText="创建"
         cancelText="取消"
-        confirmLoading={creating}
-        width={isMobile ? 'calc(100vw - 32px)' : 720}
-        onCancel={closeCreateModal}
-        onOk={() => void handleCreatePrice()}
+        confirmLoading={importing}
+        onCancel={closeImportModal}
+        onOk={() => void handleImport()}
       >
-        <Form
-          form={createForm}
-          layout="vertical"
-          initialValues={{
-            billingMode: 1,
-            billingInterval: 1,
-            currency: 'USD',
-            trialDays: 0,
-            state: 1,
-            isDefault: false,
-            displayOrder: 0,
-          }}
-        >
+        <Form form={importForm} layout="vertical">
           <Form.Item
             name="productId"
-            label="产品"
-            rules={[{ required: true, message: '请选择产品' }]}
+            label="本地商品"
+            rules={[{ required: true, message: '请选择商品' }]}
           >
             <Select
               showSearch
               loading={productsLoading}
-              placeholder="请选择产品"
               optionFilterProp="label"
+              placeholder="请选择商品"
               options={products.map((product) => ({
-                label: `${product.name} / ${product.slug} / ${product.productId}`,
+                label: `${product.name} / ${product.productId}`,
                 value: product.productId,
               }))}
+              onChange={(productId) => void loadCandidates(productId)}
             />
           </Form.Item>
           <Form.Item
             name="priceId"
-            label="Price ID"
-            rules={[{ required: true, message: '请输入 Price ID' }]}
-            extra="当前通常填写 Stripe Price ID，例如 price_xxx。"
+            label="Stripe 价格"
+            rules={[{ required: true, message: '请选择 Stripe 价格' }]}
+            extra="仅展示 Stripe 中启用、尚未入库且系统支持的月付或年付价格。"
           >
-            <Input allowClear placeholder="price_xxx" />
-          </Form.Item>
-          <Space size={16} style={{ width: '100%' }} wrap>
-            <Form.Item
-              name="billingMode"
-              label="计费模式"
-              rules={[{ required: true, message: '请选择计费模式' }]}
-              style={{ flex: 1, minWidth: 220 }}
-            >
-              <Select options={billingModeOptions} />
-            </Form.Item>
-            <Form.Item
-              name="billingInterval"
-              label="卡类型"
-              rules={[{ required: true, message: '请选择卡类型' }]}
-              style={{ flex: 1, minWidth: 220 }}
-            >
-              <Select options={billingIntervalOptions} />
-            </Form.Item>
-          </Space>
-          <Space size={16} style={{ width: '100%' }} wrap>
-            <Form.Item
-              name="currency"
-              label="币种代码"
-              rules={[{ required: true, message: '请选择币种' }]}
-              style={{ flex: 1, minWidth: 180 }}
-            >
-              <Select
-                showSearch
-                optionFilterProp="label"
-                options={currencyOptions}
-              />
-            </Form.Item>
-            <Form.Item
-              name="showPrice"
-              label="展示价格"
-              rules={[{ required: true, message: '请输入展示价格' }]}
-              style={{ flex: 1, minWidth: 180 }}
-            >
-              <InputNumber min={0} precision={2} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item
-              name="unitAmount"
-              label="最小单位金额"
-              rules={[{ required: true, message: '请输入最小单位金额' }]}
-              style={{ flex: 1, minWidth: 180 }}
-              extra="例如 USD 下 9.99 填 999。"
-            >
-              <InputNumber min={0} precision={0} style={{ width: '100%' }} />
-            </Form.Item>
-          </Space>
-          <Space size={16} style={{ width: '100%' }} wrap>
-            <Form.Item
-              name="trialDays"
-              label="试用天数"
-              style={{ flex: 1, minWidth: 160 }}
-            >
-              <InputNumber min={0} precision={0} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item
-              name="state"
-              label="状态"
-              rules={[{ required: true, message: '请选择状态' }]}
-              style={{ flex: 1, minWidth: 160 }}
-            >
-              <Select options={priceStateOptions} />
-            </Form.Item>
-            <Form.Item
-              name="displayOrder"
-              label="展示排序"
-              style={{ flex: 1, minWidth: 160 }}
-            >
-              <InputNumber precision={0} style={{ width: '100%' }} />
-            </Form.Item>
-          </Space>
-          <Form.Item name="isDefault" label="默认推荐" valuePropName="checked">
-            <Switch checkedChildren="是" unCheckedChildren="否" />
+            <Select
+              showSearch
+              disabled={!importForm.getFieldValue('productId')}
+              loading={candidatesLoading}
+              optionFilterProp="label"
+              placeholder={candidatesLoading ? '正在从 Stripe 加载' : '请选择价格'}
+              notFoundContent={candidatesLoading ? '加载中…' : '没有可导入的价格'}
+              options={candidates.map((candidate) => ({
+                label: `${formatPriceAmount(candidate)} / ${renderBillingInterval(candidate.billingInterval)} / ${candidate.priceId}`,
+                value: candidate.priceId,
+              }))}
+            />
           </Form.Item>
         </Form>
       </Modal>

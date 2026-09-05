@@ -1,10 +1,10 @@
-import { SearchOutlined } from '@ant-design/icons'
-import { Button, Card, Form, Grid, Input, List, Space, Table, Tag, Typography, message } from 'antd'
+import { PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import { Button, Card, Form, Grid, Input, List, Modal, Select, Space, Table, Tag, Typography, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useCallback, useEffect, useState } from 'react'
-import { getProducts } from '../../api/products'
+import { getProducts, getStripeProductCandidates, importStripeProduct } from '../../api/products'
 import { TimeDisplay } from '../../components/TimeDisplay'
-import type { ApiProduct } from '../../types/api'
+import type { ApiProduct, StripeProductCandidate } from '../../types/api'
 import { getErrorMessage } from '../../utils/error-message'
 
 const { Title, Text } = Typography
@@ -15,6 +15,10 @@ type ListFilters = {
   productId: string
   slug: string
   name: string
+}
+
+type ImportProductFormValues = {
+  productId: string
 }
 
 const productStateTextMap: Record<number, string> = {
@@ -61,12 +65,17 @@ const renderStateTag = (state?: number | null) => {
 
 const ProductListPage = () => {
   const [form] = Form.useForm<ListFilters>()
+  const [importForm] = Form.useForm<ImportProductFormValues>()
   const screens = useBreakpoint()
   const isMobile = !screens.md
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<ApiProduct[]>([])
   const [total, setTotal] = useState(0)
+  const [importModalOpen, setImportModalOpen] = useState(false)
+  const [candidatesLoading, setCandidatesLoading] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [candidates, setCandidates] = useState<StripeProductCandidate[]>([])
   const [applied, setApplied] = useState<ListFilters>({
     productId: '',
     slug: '',
@@ -114,6 +123,46 @@ const ProductListPage = () => {
     form.resetFields()
     setApplied({ productId: '', slug: '', name: '' })
     setPage(1)
+  }
+
+  const openImportModal = async () => {
+    setImportModalOpen(true)
+    setCandidatesLoading(true)
+    try {
+      setCandidates(await getStripeProductCandidates())
+    } catch (error) {
+      message.error(getErrorMessage(error, '加载 Stripe 商品失败'))
+      setCandidates([])
+    } finally {
+      setCandidatesLoading(false)
+    }
+  }
+
+  const closeImportModal = () => {
+    if (importing) return
+    setImportModalOpen(false)
+    importForm.resetFields()
+  }
+
+  const handleImport = async () => {
+    let values: ImportProductFormValues
+    try {
+      values = await importForm.validateFields()
+    } catch {
+      return
+    }
+    setImporting(true)
+    try {
+      await importStripeProduct(values.productId)
+      message.success('商品已从 Stripe 导入')
+      setImportModalOpen(false)
+      importForm.resetFields()
+      await load(page, applied)
+    } catch (error) {
+      message.error(getErrorMessage(error, '导入商品失败'))
+    } finally {
+      setImporting(false)
+    }
   }
 
   const totalPages = total === 0 ? 0 : Math.ceil(total / PAGE_SIZE)
@@ -182,9 +231,18 @@ const ProductListPage = () => {
 
   return (
     <div>
-      <Title level={4} style={{ marginTop: 0 }}>
-        商品列表
-      </Title>
+      <Space
+        align="center"
+        style={{ width: '100%', justifyContent: 'space-between', marginBottom: 16 }}
+        wrap
+      >
+        <Title level={4} style={{ marginTop: 0, marginBottom: 0 }}>
+          商品列表
+        </Title>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => void openImportModal()}>
+          从 Stripe 创建
+        </Button>
+      </Space>
       <Form
         form={form}
         layout={isMobile ? 'vertical' : 'inline'}
@@ -279,6 +337,36 @@ const ProductListPage = () => {
           }}
         />
       )}
+      <Modal
+        title="从 Stripe 创建商品"
+        open={importModalOpen}
+        okText="创建"
+        cancelText="取消"
+        confirmLoading={importing}
+        onCancel={closeImportModal}
+        onOk={() => void handleImport()}
+      >
+        <Form form={importForm} layout="vertical">
+          <Form.Item
+            name="productId"
+            label="Stripe 商品"
+            rules={[{ required: true, message: '请选择 Stripe 商品' }]}
+            extra="仅展示 Stripe 中启用且尚未入库的商品；名称、描述及本地默认配置将自动生成。"
+          >
+            <Select
+              showSearch
+              loading={candidatesLoading}
+              placeholder={candidatesLoading ? '正在从 Stripe 加载' : '请选择商品'}
+              optionFilterProp="label"
+              notFoundContent={candidatesLoading ? '加载中…' : '没有可导入的商品'}
+              options={candidates.map((candidate) => ({
+                label: `${candidate.name} / ${candidate.productId}`,
+                value: candidate.productId,
+              }))}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }

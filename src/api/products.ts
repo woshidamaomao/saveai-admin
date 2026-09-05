@@ -1,4 +1,4 @@
-import type { InfinityProductsResponse } from '../types/api'
+import type { ApiProduct, InfinityProductsResponse, StripeProductCandidate } from '../types/api'
 import { api } from './client'
 
 type ProductFilters = {
@@ -40,5 +40,15 @@ export const getProducts = async (params: {
   const { data } = await api.get<InfinityProductsResponse>('/products', {
     params: query,
   })
+  return data
+}
+
+export const getStripeProductCandidates = async () => {
+  const { data } = await api.get<StripeProductCandidate[]>('/products/stripe-candidates')
+  return data
+}
+
+export const importStripeProduct = async (productId: string) => {
+  const { data } = await api.post<ApiProduct>('/products/import-stripe', { productId })
   return data
 }

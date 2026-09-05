@@ -117,6 +117,12 @@ export type InfinityProductsResponse = {
   total?: number
 }
 
+export type StripeProductCandidate = {
+  productId: string
+  name: string
+  description: string | null
+}
+
 export type ApiPrice = {
   id: number
   productId: string
@@ -131,9 +137,22 @@ export type ApiPrice = {
   state: number
   isDefault: boolean
   displayOrder: number
+  stripeActive: boolean | null
+  stripeSyncedAt: string | null
   createdAt: string
   updatedAt: string
   archivedAt: string | null
+}
+
+export type StripePriceCandidate = {
+  priceId: string
+  productId: string
+  billingInterval: number
+  billingMode: number
+  unitAmount: number
+  showPrice: number
+  currency: string
+  stripeActive: boolean
 }
 
 export type InfinityPricesResponse = {
