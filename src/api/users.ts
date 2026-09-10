@@ -1,4 +1,9 @@
-import type { ApiUser, InfinityUsersResponse } from '../types/api'
+import type {
+  ApiPowerPdfRateLimitResetResult,
+  ApiPowerPdfRateLimitStatus,
+  ApiUser,
+  InfinityUsersResponse,
+} from '../types/api'
 import { api } from './client'
 
 const getUsers = async (params: {
@@ -42,4 +47,25 @@ const updateUserEmail = async (uid: string, email: string) => {
   return data
 }
 
-export { deleteUser, getUser, getUsers, updateUserEmail }
+const getUserPowerPdfRateLimit = async (uid: string) => {
+  const { data } = await api.get<ApiPowerPdfRateLimitStatus>(
+    `/users/${uid}/pdf-rate-limit`,
+  )
+  return data
+}
+
+const resetUserPowerPdfRateLimit = async (uid: string) => {
+  const { data } = await api.delete<ApiPowerPdfRateLimitResetResult>(
+    `/users/${uid}/pdf-rate-limit`,
+  )
+  return data
+}
+
+export {
+  deleteUser,
+  getUser,
+  getUsers,
+  getUserPowerPdfRateLimit,
+  resetUserPowerPdfRateLimit,
+  updateUserEmail,
+}

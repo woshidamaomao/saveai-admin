@@ -1,11 +1,14 @@
 import {
   ArrowLeftOutlined,
   BarChartOutlined,
+  DeleteOutlined,
   EditOutlined,
   FileTextOutlined,
   GiftOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons'
 import {
+  Alert,
   Button,
   Card,
   Descriptions,
@@ -13,10 +16,12 @@ import {
   Input,
   InputNumber,
   Modal,
+  Popconfirm,
   Result,
   Select,
   Space,
   Spin,
+  Table,
   Tag,
   Typography,
   message,
@@ -27,9 +32,21 @@ import {
   createTrialSubscription,
   getSubscriptionTrialPriceOptions,
 } from '../../api/subscriptions'
-import { getUser, updateUserEmail } from '../../api/users'
+import {
+  getUser,
+  getUserPowerPdfRateLimit,
+  resetUserPowerPdfRateLimit,
+  updateUserEmail,
+} from '../../api/users'
 import { TimeDisplay } from '../../components/TimeDisplay'
-import type { ApiPrice, ApiSubscription, ApiUser, Role } from '../../types/api'
+import type {
+  ApiPowerPdfRateLimitStatus,
+  ApiPowerPdfRateLimitWindow,
+  ApiPrice,
+  ApiSubscription,
+  ApiUser,
+  Role,
+} from '../../types/api'
 import { getErrorMessage } from '../../utils/error-message'
 
 const { Title, Text } = Typography
@@ -171,6 +188,30 @@ const formatUsage = (used?: number, limit?: number) => {
   return `${usedText} / ${limitText}`
 }
 
+const formatDuration = (seconds?: number | null) => {
+  if (seconds == null) {
+    return '—'
+  }
+  if (seconds <= 0) {
+    return '已过期'
+  }
+
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const remainingSeconds = seconds % 60
+  return [
+    hours > 0 ? `${hours}小时` : '',
+    minutes > 0 ? `${minutes}分` : '',
+    hours === 0 && remainingSeconds > 0 ? `${remainingSeconds}秒` : '',
+  ].filter(Boolean).join(' ')
+}
+
+const rateLimitWindowLabel: Record<ApiPowerPdfRateLimitWindow['name'], string> = {
+  short: '短周期',
+  medium: '小时周期',
+  long: '24 小时周期',
+}
+
 const renderSubscriptionLink = (
   subscription: ApiSubscription | null | undefined,
   navigate: ReturnType<typeof useNavigate>,
@@ -207,6 +248,9 @@ const UserDetailPage = () => {
   const [trialSubmitting, setTrialSubmitting] = useState(false)
   const [emailModalOpen, setEmailModalOpen] = useState(false)
   const [emailSubmitting, setEmailSubmitting] = useState(false)
+  const [rateLimitStatus, setRateLimitStatus] = useState<ApiPowerPdfRateLimitStatus | null>(null)
+  const [rateLimitLoading, setRateLimitLoading] = useState(false)
+  const [rateLimitResetting, setRateLimitResetting] = useState(false)
 
   const load = useCallback(async () => {
     if (!uid) {
@@ -239,6 +283,45 @@ const UserDetailPage = () => {
   useEffect(() => {
     void load()
   }, [load])
+
+  const loadRateLimit = useCallback(async () => {
+    if (!uid) {
+      return
+    }
+
+    setRateLimitLoading(true)
+    try {
+      setRateLimitStatus(await getUserPowerPdfRateLimit(uid))
+    } catch (error) {
+      setRateLimitStatus(null)
+      message.error(getErrorMessage(error, '加载 PDF 限流数据失败'))
+    } finally {
+      setRateLimitLoading(false)
+    }
+  }, [uid])
+
+  useEffect(() => {
+    if (user?.uid) {
+      void loadRateLimit()
+    }
+  }, [loadRateLimit, user?.uid])
+
+  const resetRateLimit = async () => {
+    if (!uid) {
+      return
+    }
+
+    setRateLimitResetting(true)
+    try {
+      const result = await resetUserPowerPdfRateLimit(uid)
+      message.success(`PDF 限流已重置，共删除 ${result.deletedKeys} 个 Redis 键`)
+      await loadRateLimit()
+    } catch (error) {
+      message.error(getErrorMessage(error, '重置 PDF 限流失败'))
+    } finally {
+      setRateLimitResetting(false)
+    }
+  }
 
   const loadTrialPriceOptions = async () => {
     setTrialPriceLoading(true)
@@ -580,6 +663,89 @@ const UserDetailPage = () => {
               {formatUsage(user.wordExportUsed, user.wordExportLimit)}
             </Descriptions.Item>
           </Descriptions>
+        </Card>
+
+        <Card
+          title="PDF 接口限流（Redis）"
+          extra={
+            <Space>
+              <Button
+                icon={<ReloadOutlined />}
+                loading={rateLimitLoading}
+                onClick={() => void loadRateLimit()}
+              >
+                重新查询
+              </Button>
+              <Popconfirm
+                title="确认重置该用户的 PDF 限流？"
+                description="将删除 power/pdf 的计数键和封禁键，用户可立即重新请求。"
+                okText="确认重置"
+                cancelText="取消"
+                okButtonProps={{ danger: true, loading: rateLimitResetting }}
+                onConfirm={() => resetRateLimit()}
+              >
+                <Button danger icon={<DeleteOutlined />} loading={rateLimitResetting}>
+                  重置 PDF 限流
+                </Button>
+              </Popconfirm>
+            </Space>
+          }
+        >
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message="这里展示的是 Redis 活跃限流窗口，不是数据库中的自然日用量。重置不会修改用户订阅或今日用量记录。"
+          />
+          <Table<ApiPowerPdfRateLimitWindow>
+            rowKey="name"
+            size="small"
+            loading={rateLimitLoading}
+            pagination={false}
+            dataSource={rateLimitStatus?.windows ?? []}
+            locale={{ emptyText: '当前没有查询到限流记录' }}
+            columns={[
+              {
+                title: '窗口',
+                dataIndex: 'name',
+                render: (name: ApiPowerPdfRateLimitWindow['name'], record) => (
+                  <Space direction="vertical" size={0}>
+                    <Text>{rateLimitWindowLabel[name]}</Text>
+                    <Text type="secondary">{formatDuration(record.windowSeconds)}</Text>
+                  </Space>
+                ),
+              },
+              {
+                title: '请求次数 / 上限',
+                render: (_, record) => `${record.count} / ${record.limit}`,
+              },
+              {
+                title: '剩余次数',
+                dataIndex: 'remaining',
+              },
+              {
+                title: '计数重置倒计时',
+                dataIndex: 'resetInSeconds',
+                render: (value: number | null) => formatDuration(value),
+              },
+              {
+                title: '封禁状态',
+                render: (_, record) => record.blocked
+                  ? <Tag color="error">封禁中（{formatDuration(record.blockExpiresInSeconds)}）</Tag>
+                  : <Tag color="success">正常</Tag>,
+              },
+            ]}
+            expandable={{
+              rowExpandable: (record) => record.counterKeys.length + record.blockKeys.length > 0,
+              expandedRowRender: (record) => (
+                <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                  {[...record.counterKeys, ...record.blockKeys].map((key) => (
+                    <Text code copyable key={key}>{key}</Text>
+                  ))}
+                </Space>
+              ),
+            }}
+          />
         </Card>
 
         {user.subscription ? (

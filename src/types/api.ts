@@ -36,6 +36,31 @@ export type ApiUser = {
   deletedAt?: string
 }
 
+export type ApiPowerPdfRateLimitWindow = {
+  name: 'short' | 'medium' | 'long'
+  limit: number
+  windowSeconds: number
+  count: number
+  remaining: number
+  resetInSeconds: number | null
+  blocked: boolean
+  blockExpiresInSeconds: number | null
+  counterKeys: string[]
+  blockKeys: string[]
+}
+
+export type ApiPowerPdfRateLimitStatus = {
+  uid: string
+  route: 'power/pdf'
+  windows: ApiPowerPdfRateLimitWindow[]
+}
+
+export type ApiPowerPdfRateLimitResetResult = {
+  uid: string
+  route: 'power/pdf'
+  deletedKeys: number
+}
+
 export type LoginResponse = {
   token: string
   refreshToken: string
